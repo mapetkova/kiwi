@@ -17,6 +17,7 @@ import json
 import math
 import os
 import random
+import shutil
 import struct
 import subprocess
 import sys
@@ -125,6 +126,9 @@ def main():
             "lloyd": {"iterations": 0, "save_each_iteration": False},
         }
         cfg.update(extra)
+        # KIWI caches every stage's output, so start from a clean run folder or a stale result
+        # could make this test pass without actually running anything.
+        shutil.rmtree(cfg["work_folder"], ignore_errors=True)
         path = os.path.join(work, name + ".json")
         with open(path, "w") as f:
             json.dump(cfg, f, indent=2)
