@@ -1,0 +1,27 @@
+{
+  "run_name": "ascii_CMZ_HDens_ECCENTRIC_TALPHA_00232",
+  "domain": {
+    "x_min": -102.92254687500001,
+    "x_max": -95.92254687500001,
+    "y_min": -43.71244687500001,
+    "y_max": -36.71244687500001,
+    "z_min": -10.329211874999999,
+    "z_max": -3.3292118749999986
+  },
+  "grid_blocks": {
+    "block_scale_factor": 3.0
+  },
+  "input_snapshot": "../../size-linewidth/SPH-data/snaps/ascii_CMZ_HDens_ECCENTRIC_TALPHA_00232.out",
+  "input_snapshot_format": "dale_phantom",
+  "work_folder": "runs",
+  "buffer": {
+    "enabled": true,
+    "strategy": "coverage_grid"
+  },
+  "lloyd": {
+    "iterations": 0
+  },
+  "cartesian_map": {
+    "resolution": 128
+  }
+}

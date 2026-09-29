@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use KIWI, please cite the two papers listed under references."
+title: "KIWI: Kernel-Integral Weighted Interpolation"
+type: software
+authors:
+  - family-names: Petkova
+    given-names: "Maya A."
+license: GPL-3.0-or-later
+repository-code: "https://github.com/mapetkova/kiwi"
+preferred-citation:
+  type: article
+  title: "Fast and accurate Voronoi density gridding from Lagrangian hydrodynamics data"
+  authors:
+    - {family-names: Petkova, given-names: "Maya A."}
+    - {family-names: Laibe, given-names: Guillaume}
+    - {family-names: Bonnell, given-names: "Ian A."}
+  journal: "Journal of Computational Physics"
+  volume: 353
+  start: 300
+  end: 315
+  year: 2018
+  doi: "10.1016/j.jcp.2017.10.024"
+references:
+  - type: article
+    title: "Modelling of ionizing feedback with smoothed particle hydrodynamics and Monte Carlo radiative transfer on a Voronoi grid"
+    authors:
+      - {family-names: Petkova, given-names: "Maya A."}
+      - {family-names: Vandenbroucke, given-names: Bert}
+      - {family-names: Bonnell, given-names: "Ian A."}
+      - {family-names: Kruijssen, given-names: "J. M. Diederik"}
+    journal: "Monthly Notices of the Royal Astronomical Society"
+    volume: 507
+    start: 858
+    end: 878
+    year: 2021
+    doi: "10.1093/mnras/stab2178"

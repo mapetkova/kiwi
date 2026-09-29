@@ -1,0 +1,201 @@
+// SPH cubic-spline kernel line integral: an analytic "ground truth" form
+// (full_integral_new) and a tabulated fast-path approximation of it
+// (gridded_integral) built by interpolating a precomputed lookup table.
+//
+// This is the expensive per-(particle, cell) computation that both density
+// and mass-weighted velocity are derived from -- see mapping.hpp for how
+// it's shared between the two rather than evaluated twice.
+//
+// Ported from the legacy density/velocity mapping tools. One thing from
+// those tools is deliberately NOT ported: kernel()/line()/area()/volume(), a
+// numerical-quadrature path that backed a third, even-more-expensive
+// alternative to full_integral_new (the "//M = M*(volume(...))" lines,
+// always commented out in every legacy tool -- genuinely unreachable, not
+// merely unused). full_integral_new() itself IS ported and kept reachable
+// (see mapping.hpp's use_tabulated_integral) -- every legacy tool hardcoded
+// is_tabulated=true at its call sites so full_integral_new never actually
+// ran in producing a historical grid, but it's the closed-form reference the
+// table approximates, so it stays available to run directly.
+#pragma once
+
+#include <string>
+#include <vector>
+
+namespace kiwi {
+
+// Loaded from a "density-map-grid-<...>.dat" file: a 3D table of the kernel
+// line integral over (r0, mu0, cos(phi)), used for trilinear interpolation
+// in gridded_integral(). The header fields (nr01/nR_01/nphi1/rl/mul/cphil/
+// nr02/nR_02/nphi2) are read from the file and stored here rather than
+// duplicated as hardcoded constants inside the interpolation routine (the
+// legacy code re-declared matching constants in two places -- the loader and
+// gridded_integral() itself -- which happened to agree but had no code path
+// enforcing that).
+struct DensityLookupTable {
+    int nr01 = 0, nR_01 = 0, nphi1 = 0;
+    int nr02 = 0, nR_02 = 0, nphi2 = 0;
+    double rl = 0, mul = 0, cphil = 0;
+    int nr0 = 0, nR_0 = 0, nphi = 0;
+
+    // Flattened (nr0+2) x (nR_0+1) x (nphi+1) array. i in [0, nr0+1], j in
+    // [0, nR_0], k in [0, nphi] -- the +1 margins exist because the
+    // interpolation reads at i+1/j+1/k+1 of the last valid cell.
+    std::vector<double> values;
+
+    double at(int i, int j, int k) const;
+    double& at(int i, int j, int k);
+};
+
+DensityLookupTable load_density_table(const std::string& path);
+
+// Builds the same table load_density_table() would load from
+// "density-map-grid-250-300-300.dat", but computed in memory via
+// full_integral_new() instead of read from disk -- for when
+// mapping.use_tabulated_integral is set but no such file is available (see
+// run_mapping_stage() in mapping.cpp for where this is triggered).
+//
+// This is a direct port of the grid this project's historical tabulated
+// tools were actually generated from -- CMacIonize's
+// SPHArrayInterface::gridding() (Vandenbroucke et al., not part of this
+// tool's own source, provided by Maya as the canonical reference to
+// reproduce) -- not a new design: same fixed grid shape (nr01=50, nr02=199,
+// nR_01=nR_02=nphi1=nphi2=150; rl=0.1, mul=0.98, cphil=0.98, matching the
+// real density-map-grid-250-300-300.dat's own header exactly) and the same
+// per-cell r0/mu0/phi formulas, just evaluated with this codebase's already-
+// validated full_integral_new() in place of gridding()'s own full_integral()
+// (the same closed-form kernel line integral both are named after -- see
+// full_integral_new()'s own doc comment). Deliberately not configurable:
+// like writer_polaris.cpp's POLARIS quantity-ID list, this reproduces one
+// specific, already-validated historical table, not a general table
+// generator -- revisit if a different grid shape is ever needed.
+//
+// Note the same divide-by-mu0==0 (j==0, i.e. mu0=0.0) that gridding() has
+// at its first mu0 grid point is reproduced here too, not special-cased
+// around: it produces R_0 = +inf (IEEE-754 double division), which flows
+// through to a well-defined finite full_integral_new() result because that
+// large-R_0 regime lands in the linedist2 > 4h^2 branch, where the terms
+// that would otherwise multiply infinity by something nonzero either
+// vanish (I1 = atan(u/a) -> atan(0) = 0) or are already zero (D2, D3) --
+// confirmed by this behavior reproducing the real table file's own finite
+// values at those grid points during validation, not by inspection alone.
+DensityLookupTable generate_density_table();
+
+// phi, r0, R_0 are in the same physical length units as the grid/particle
+// coordinates; h is the SPH particle's smoothing length for this
+// (particle, cell) evaluation. Returns the tabulated kernel line integral
+// used to weight the particle's contribution to a Voronoi cell face.
+double gridded_integral(const DensityLookupTable& table, double h, double phi, double r0_old, double R_0_old);
+
+// The analytic closed-form kernel line integral gridded_integral()
+// approximates. No lookup table needed, but noticeably slower per call
+// (elliptic-integral-like series of acos/atan/log terms vs. one trilinear
+// lookup) -- this is the "ground truth" version, useful to run directly for
+// spot-checking the table or for r0/R_0/phi combinations outside the
+// table's coverage.
+double full_integral_new(double h, double phi, double r0, double R_0);
+
+// full_integral_new() decomposed into its three natural tiers, so a caller
+// that evaluates it many times per (particle, wall) and per (particle, edge)
+// -- as compute_cell_integral() in mapping.cpp does, once per vertex of
+// every edge of every visited face -- can hoist the tiers that don't depend
+// on the per-vertex angle phi instead of recomputing them on every call.
+//
+// Per the thesis derivation (Petkova, Ch. 4): the B1/B2/B3 boundary
+// constants (eq. 4.64-4.66) are functions of r0 and h alone -- constant
+// across every edge of one wall, since a wall's r0 (perpendicular distance
+// from the particle to the wall's plane) doesn't change edge to edge. The
+// D2/D3 region-matching constants (the "phi1 business"/"phi2 business"
+// blocks, matching continuity at r0=h and r0=2h) are functions of r0, R_0
+// and h -- constant across the two full_integral_new() calls needed for one
+// edge's two endpoints (phi1 and phi2), since R_0 (perpendicular distance
+// from the particle's projection to that edge's line) is fixed per edge and
+// doesn't depend on which endpoint's phi is being evaluated. Only the final
+// block -- the I0/I_2/I_4/I1/I_1/I_3/I_5 series and the r2-regime choice --
+// is genuinely a function of phi and must be evaluated once per vertex.
+//
+// WallIntegralConstants::valid is false iff r0 == 0.0 (matching
+// full_integral_new()'s r0==0 -> 0 guard); EdgeIntegralConstants::valid is
+// false iff the wall was invalid or R_0 == 0.0 (matching the R_0==0 -> 0
+// guard). vertex_integral() reproduces the remaining phi==0 -> 0 guard
+// itself. full_integral_new() is now a thin wrapper over these three calls,
+// kept for spot-checking/API compatibility -- it does the full recompute
+// every time, same as before this split existed.
+struct WallIntegralConstants {
+    bool valid = false; // r0 != 0.0
+    double r0 = 0.0, h = 0.0;
+    double h2 = 0.0, r03 = 0.0, r0h2 = 0.0, r0h3 = 0.0, r0h_2 = 0.0, r0h_3 = 0.0;
+    double B1 = 0.0, B2 = 0.0, B3 = 0.0;
+};
+
+struct EdgeIntegralConstants {
+    bool valid = false; // wall.valid && R_0 != 0.0
+    double R_0 = 0.0;
+    double a = 0.0, a2 = 0.0;
+    double D2 = 0.0, D3 = 0.0;
+};
+
+// Once per wall (face): needs only r0 (the wall's perpendicular distance
+// from the particle) and h.
+WallIntegralConstants compute_wall_constants(double h, double r0);
+
+// Once per edge: needs the edge's R_0 on top of the wall constants above.
+EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& wall, double R_0);
+
+// Once per vertex (twice per edge, at phi1 and phi2): the only tier that
+// actually depends on phi.
+double vertex_integral(const WallIntegralConstants& wall, const EdgeIntegralConstants& edge, double phi);
+
+// The full per-face contribution to Msum for one planar, convex,
+// outward-wound polygonal face -- factored out of the per-face body of the
+// edge loop in mapping.cpp's compute_cell_integral() so any caller with
+// explicit face-vertex coordinates in hand can reuse the exact same,
+// already-validated math, not just a caller walking a voro++
+// voronoicell_neighbor's packed face_vertices()/vertices() arrays.
+//
+// Used by:
+//  - mapping.cpp's compute_cell_integral(), fed voro++ polygon faces
+//    (arbitrary vertex count, from a Voronoi tessellation)
+//  - cartesian_grid.cpp's direct SPH-to-Cartesian-grid path
+//    ("development one"), fed the 6 axis-aligned rectangular faces (always
+//    4 vertices) of a regular grid cell -- see that file for why the face's
+//    *shape* doesn't matter to this function at all: it's the same
+//    closed-form kernel line integral either way, just walked around
+//    however many corners the face happens to have.
+//
+// `vertices` is this face's corners in order, flattened as (x0,y0,z0, x1,y1,
+// z1, ...) absolute positions (at least 3 vertices, i.e. size() >= 9). A
+// caller walking a real voro++ voronoicell_neighbor's packed
+// face_vertices()/vertices() arrays (as mapping.cpp does) just needs to
+// preserve that vertex order unchanged -- no winding decision to make.
+//
+// A caller building a face's vertices by hand (as cartesian_grid.cpp does
+// for a Cartesian cell's 6 fixed rectangular faces, having no voro++ object
+// to read from) DOES need to pick a winding, and the convention this
+// function needs is NOT the naive "(v1-v0) x (v2-v0) points outward from
+// the cell" reading of voro++.hh's own documented convention -- that gives
+// the wrong sign here (confirmed empirically: a synthetic cube face-integral
+// test came out exactly -1.0 instead of +1.0 with that winding, only
+// correcting to +1.0 once reversed -- see cartesian_grid.cpp's
+// box_cell_faces() for the full validation writeup, including an
+// independent end-to-end ground truth this was cross-checked against). The
+// discrepancy against voro++.hh's stated convention isn't fully understood;
+// what's confirmed is the empirical winding cartesian_grid.cpp now uses.
+// Getting a face's winding backward silently flips that face's sign
+// contribution rather than erroring, so any new hand-built-face caller
+// should validate winding against a case with a known answer (e.g. a box
+// fully enclosing a particle's kernel support, where Msum summed across all
+// 6 faces must equal exactly 1.0) rather than trusting a derivation by
+// inspection.
+//
+// out_vert, if non-null, is set to the number of this face's edges whose
+// kernel-overlap radius r = sqrt(r0^2 + R^2) reaches or exceeds 2h (out of
+// the kernel's support) -- mapping.cpp's BFS uses out_vert == vertex count
+// to decide whether a neighbor across this face is worth visiting. A caller
+// that already knows which cells to visit some other way (cartesian_grid.cpp
+// determines this arithmetically from the particle's kernel radius, not by
+// BFS discovery) can just pass nullptr.
+double compute_face_integral(double x0, double y0, double z0, double h,
+                              bool use_tabulated_integral, const DensityLookupTable* table,
+                              const std::vector<double>& vertices, int* out_vert = nullptr);
+
+} // namespace kiwi

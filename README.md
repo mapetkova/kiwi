@@ -1,0 +1,143 @@
+# KIWI
+
+**KIWI** stands for **Kernel-Integral Weighted Interpolation**.
+
+KIWI maps SPH (smoothed-particle hydrodynamics) simulation snapshots onto grids. Instead of
+sampling the density at a point, it integrates each particle's smoothing kernel over the volume of
+every grid cell, so mass is conserved cell by cell and the result doesn't depend on how the
+particles happen to fall relative to the cells. The mapping methods follow
+Petkova et al. 2018 ([doi:10.1016/j.jcp.2017.10.024](https://doi.org/10.1016/j.jcp.2017.10.024))
+and Petkova et al. 2021 ([doi:10.1093/mnras/stab2178](https://doi.org/10.1093/mnras/stab2178)).
+
+It can produce:
+
+- **Density and velocity on a Voronoi grid.** KIWI builds the Voronoi tessellation from the
+  (relaxed) particle positions with [Voro++](https://math.lbl.gov/voro++/) and maps the SPH data
+  onto its cells.
+- **Density and velocity on a Cartesian grid**, either resampled from the Voronoi grid
+  (`cartesian-map`) or computed directly from the particles (`sph-to-grid`).
+- **As an optional add-on**, the Voronoi grid written in the input format of the radiative-transfer
+  code [POLARIS](https://www1.astrophysik.uni-kiel.de/~polaris/), or as plain text.
+
+One JSON config per run drives every stage, and each stage caches its output, so re-running a
+config only recomputes what is missing.
+
+> **Status: pre-beta.** The mapping stages have been validated against earlier tools, including
+> SPLASH, but the interface may still change. Bug reports are welcome.
+
+## Build
+
+Requires CMake >= 3.13 and a C++17 compiler. Voro++ and nlohmann/json are bundled in
+`third_party/`, so there is nothing else to install.
+
+```
+mkdir build && cd build
+cmake ..
+cmake --build . -j
+```
+
+This produces `build/kiwi`. OpenMP is optional and speeds up the mapping stage. On macOS the
+system compiler has no OpenMP, so use Homebrew's:
+
+```
+brew install llvm libomp
+cmake .. -DCMAKE_CXX_COMPILER=$(brew --prefix llvm)/bin/clang++ -DOpenMP_ROOT=$(brew --prefix libomp)
+```
+
+## Quick start
+
+1. Copy one of the configs in `configs/` and edit the paths. `hdens-00282-smoke-test.json` is
+   the fastest. Set `input_snapshot` to your snapshot and `domain` to the box you want to map.
+2. Run a stage, from the repo root:
+
+```
+build/kiwi map <config.json>
+```
+
+Each stage runs the stages before it if their output is missing:
+
+| Command | What it does | Output (in `work_folder/<snapshot>/`) |
+|---|---|---|
+| `kiwi point-set <cfg>` | Load the snapshot, optionally add buffer points, relax with Lloyd iterations | `points-final.dat` |
+| `kiwi tessellate <cfg>` | Voronoi tessellation of the points | `tessellation.dat` |
+| `kiwi map <cfg>` | Kernel-integral density and velocity per Voronoi cell | `mapping.dat` |
+| `kiwi cartesian-map <cfg>` | Resample the Voronoi result onto a Cartesian grid | `cartesian_map.dat` |
+| `kiwi sph-to-grid <cfg>` | Map particles directly onto a Cartesian grid (no Voronoi step) | `cartesian_grid.dat` |
+| `kiwi write-voronoi <cfg>` | Plain-text Voronoi grid | `grid-voronoi.txt` |
+| `kiwi write-polaris <cfg>` | Optional: POLARIS binary grid | `grid-polaris.dat` |
+| `kiwi inverse-mapping-test <cfg>` | Validation: map the grid back onto the particles | see log |
+| `kiwi manifest <cfg>` | Write `manifest.json` recording the settings behind each output | `manifest.json` |
+
+The output of `sph-to-grid` is currently in KIWI's own simple binary format, which is still a
+placeholder, and `tools/plot_cartesian_map.py` cannot read it yet. `tools/plot_cartesian_map.py`
+plots the `cartesian-map` output.
+
+## Minimal config
+
+```json
+{
+  "run_name": "my-run",
+  "domain": {"x_min": -10, "x_max": 10, "y_min": -10, "y_max": 10, "z_min": -10, "z_max": 10},
+  "input_snapshot": "path/to/snapshot.out",
+  "work_folder": "runs",
+  "buffer": {"enabled": false},
+  "lloyd": {"iterations": 1, "save_each_iteration": false},
+  "cartesian_map": {"resolution": 128}
+}
+```
+
+Useful options:
+
+- `buffer.strategy`: `"coverage_grid"` (general purpose) or `"legacy_brick"` (specific to one
+  cloud geometry). A buffer of extra points keeps the cells at the domain edge finite.
+- `mapping.use_tabulated_integral`: `false` (default) uses the analytic kernel integral. `true`
+  uses a lookup table, which is faster but approximate.
+- `polaris_writer`: unit scales and temperature for the optional POLARIS output. The domain must
+  be a cube if you use it.
+- `diagnostics.enabled`: writes diagnostic plots (needs Python with matplotlib).
+
+## Input snapshots
+
+`input_snapshot_format` is `"auto"` by default. Two ASCII formats are supported:
+
+- `splash_ascii`: the output of `splash to ascii`. Columns are read by name from the header, so
+  the exact column set and order can vary. Required: `x y z m vx vy vz` and one of `h` or density.
+- `dale_phantom`: headerless, 9 columns per particle: `x y z vx vy vz m h rho`.
+
+`tools/suggest_config.py` reads either format and proposes a config for a snapshot.
+
+## Tools
+
+`tools/` holds helper scripts for plotting (`plot_cartesian_map.py`, `plot_diagnostic.py`,
+`plot_h_comparison.py`), config suggestion (`suggest_config.py`), and a lattice regression test
+(`test_lattice_grid.cpp`, built with the project).
+
+## Known limitations
+
+- The POLARIS quantity list is fixed and not configurable.
+- `sph-to-grid` has no native POLARIS or ASCII writer yet.
+- There is no automated test suite yet. Validation so far is against earlier tools' output.
+
+## Citation
+
+If you use KIWI, please cite the two papers behind its mapping methods:
+
+- Petkova, M. A., Laibe, G., Bonnell, I. A., 2018, *Fast and accurate Voronoi density gridding from
+  Lagrangian hydrodynamics data*, Journal of Computational Physics, 353, 300.
+  [doi:10.1016/j.jcp.2017.10.024](https://doi.org/10.1016/j.jcp.2017.10.024)
+- Petkova, M. A., Vandenbroucke, B., Bonnell, I. A., Kruijssen, J. M. D., 2021, *Modelling of
+  ionizing feedback with smoothed particle hydrodynamics and Monte Carlo radiative transfer on a
+  Voronoi grid*, MNRAS, 507, 858.
+  [doi:10.1093/mnras/stab2178](https://doi.org/10.1093/mnras/stab2178)
+
+GitHub's "Cite this repository" button uses `CITATION.cff`.
+
+## License
+
+Copyright (C) 2026 Maya A. Petkova.
+
+KIWI is free software: you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. See [LICENSE](LICENSE).
+
+KIWI bundles third-party code under its own licenses; see [THIRD_PARTY.md](THIRD_PARTY.md).

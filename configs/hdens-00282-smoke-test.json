@@ -1,0 +1,13 @@
+{
+  "run_name": "hdens-00282-smoke-test",
+  "domain": {
+    "x_min": -122.0, "x_max": -96.0,
+    "y_min": -28.0, "y_max": -0.5,
+    "z_min": -26.0, "z_max": -1.0
+  },
+  "grid_blocks": {"block_scale_factor": 3.0},
+  "input_snapshot": "PATH/TO/snapshots/ascii_CMZ_HDens_ECCENTRIC_TALPHA_00282.out",
+  "work_folder": "runs",
+  "buffer": {"enabled": false},
+  "lloyd": {"iterations": 1, "save_each_iteration": true}
+}
