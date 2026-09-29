@@ -104,19 +104,71 @@ Useful options:
   the exact column set and order can vary. Required: `x y z m vx vy vz` and one of `h` or density.
 - `dale_phantom`: headerless, 9 columns per particle: `x y z vx vy vz m h rho`.
 
-`tools/suggest_config.py` reads either format and proposes a config for a snapshot.
+`tools/suggest_config.py` (below) reads either format and proposes a config for a snapshot.
+
+## Setting up a run: `suggest_config.py`
+
+`tools/suggest_config.py` builds a ready-to-run config from a raw snapshot, so you don't have to
+pick a domain by hand or copy an old config. It needs Python 3 with `numpy` (and `matplotlib` for
+the interactive zoom).
+
+```
+python3 tools/suggest_config.py path/to/snapshot.out
+```
+
+It reads the snapshot (format auto-detected), suggests a **cubic** domain that covers the particles
+(trimming a tiny fraction of far-flung outliers, and reporting how many particles fall outside),
+asks you for the few things it can't guess (`run_name`, `work_folder`, and whether to use a
+tabulated kernel integral), and writes `config.json`. Everything else gets sensible defaults, with a
+`coverage_grid` buffer, no Lloyd iterations and a 128-cell Cartesian map, which you can edit
+afterwards.
+
+**Zooming in on part of a snapshot.** Use `--mode zoom` to map a smaller cubic region instead of the
+whole snapshot. The centre can be the geometric centre, the centre of mass, the densest region, or
+coordinates you give:
+
+```
+python3 tools/suggest_config.py snapshot.out --mode zoom --center-mode densest --box-side 8 \
+    --run-name my-zoom --work-folder runs --non-interactive
+```
+
+If you leave out `--center-mode` and `--box-side`, an **interactive** window opens instead. It
+plots the particles in two projections (x-y and x-z) with the candidate centres marked and the
+current box drawn on top. At the terminal you can switch the centre (`g` geometric, `c` centre of
+mass, `d` densest, `u` your own coordinates) and change the box size, and the plot redraws. Press
+`a` to accept, or `q` to quit without writing anything. On a machine with no display it writes a
+PNG each round instead. The accepted selection is also saved as `<snapshot>_zoom_selection.png`.
+
+Other useful options: `--shift-snapshot` (also write a copy of the snapshot centred on the origin),
+`--output` (where to write the config), `--non-interactive` (no prompts, for scripting; give
+`--run-name` and `--work-folder`), and `--help` for the full list.
 
 ## Tools
 
 `tools/` holds helper scripts for plotting (`plot_cartesian_map.py`, `plot_diagnostic.py`,
-`plot_h_comparison.py`), config suggestion (`suggest_config.py`), and a lattice regression test
-(`test_lattice_grid.cpp`, built with the project).
+`plot_h_comparison.py`), the config builder described above (`suggest_config.py`), and a
+lattice regression test (`test_lattice_grid.cpp`, built with the project).
+
+## Tests
+
+From the build directory, after building:
+
+```
+ctest --output-on-failure
+```
+
+- `lattice_tessellation`: a Voronoi tessellation of a cubic lattice must be exact cubes.
+- `synthetic_pipeline`: builds a small synthetic SPH cloud with a known total mass and bulk velocity,
+  runs `sph-to-grid` and the full Voronoi pipeline, and checks that mass is conserved and the
+  velocity is recovered. It needs Python 3 and nothing else.
+
+The test data is generated on the fly, so nothing needs downloading.
 
 ## Known limitations
 
 - The POLARIS quantity list is fixed and not configurable.
 - `sph-to-grid` has no native POLARIS or ASCII writer yet.
-- There is no automated test suite yet. Validation so far is against earlier tools' output.
+- The automated tests are synthetic. A test on a real SPH cutout is planned.
 
 ## Citation
 
