@@ -16,8 +16,8 @@
 // Lloyd relaxation -- the lattice points themselves are the full site set.
 //
 // This is also the ground-truth reference fixture for validating
-// "development one" (the dedicated Cartesian-mapping rewrite, see the
-// project notes): the same lattice, fed through this tool's existing
+// sph-to-grid (the direct SPH -> Cartesian mapping): the same lattice, fed
+// through this tool's existing
 // (already-validated) kernel-integral mapping machinery, gives known-correct
 // density/velocity values to check the new fast path against.
 //

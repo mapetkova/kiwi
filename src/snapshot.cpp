@@ -470,7 +470,7 @@ std::string detect_snapshot_format(const std::string& path) {
     std::getline(f, first_line);
     // splash-to-ascii files always open with a `#` comment naming SPLASH as
     // the tool that wrote them (see the module header comment for the full
-    // preamble shape); Maya's dale_phantom format has no header at all --
+    // preamble shape); the dale_phantom format has no header at all --
     // its first line is already the first particle's data.
     if (!first_line.empty() && first_line[0] == '#' && first_line.find("SPLASH") != std::string::npos) {
         return "splash_ascii";

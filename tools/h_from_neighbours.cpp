@@ -11,9 +11,9 @@
 //
 // NOT wired into the kiwi CLI yet -- deliberately a standalone tool (see
 // tools/bench_grid_blocks.cpp and tools/test_lattice_grid.cpp for the same
-// pattern), per Maya's own framing: this is one of several particle-related
-// routines to build and validate independently before folding them into the
-// standalone inverse-mapping feature.
+// pattern): this is one of several particle-related routines to build and
+// validate independently before folding them into the standalone
+// inverse-mapping feature.
 //
 // --- Algorithm, verified directly against Phantom's actual source
 // (github.com/danieljprice/phantom, module `densityforce` in

@@ -1,9 +1,9 @@
-// "Development one": a from-scratch, independent SPH -> Cartesian grid
+// sph-to-grid: a from-scratch, independent SPH -> Cartesian grid
 // mapping path -- computed directly, without going through voro++,
-// point_set, tessellation, or the existing mapping stage at all. See the
-// project notes for the distinction: development two (cartesian_map.hpp) is
-// a *resample* of the Voronoi pipeline's own already-computed output, for
-// visualization convenience; this is a wholly separate, efficient
+// point_set, tessellation, or the existing mapping stage at all. Unlike
+// cartesian-map (cartesian_map.hpp), which is a *resample* of the Voronoi
+// pipeline's own already-computed output, for visualization convenience,
+// this is a wholly separate, efficient
 // computation of density and mass-weighted velocity straight onto a
 // regular Cartesian grid -- no buffer, no Lloyd relaxation, no Voronoi
 // tessellation anywhere in the path.
@@ -36,12 +36,12 @@
 //    generalized to an arbitrary polygon -- see compute_face_integral()'s
 //    own doc comment for the winding convention this relies on.
 //
-// Output is a placeholder for now, per explicit agreement with Maya: this
+// Output is a placeholder for now, this
 // reuses cartesian_map.hpp's existing self-describing binary format (minus
 // the voronoi_cell_id field, which doesn't apply here -- there is no
 // Voronoi cell in this path at all) purely to get a real, runnable,
 // inspectable artifact end-to-end. Neither the POLARIS-native Cartesian
-// grid format nor the plain self-describing ASCII writer Maya asked for
+// grid format nor the plain self-describing ASCII writer
 // have been designed yet -- both are deliberately deferred to a later step.
 #pragma once
 

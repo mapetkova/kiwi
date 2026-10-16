@@ -146,8 +146,8 @@ struct MappingConfig {
 // see writer_polaris.cpp for the byte layout). That format bakes in a fixed
 // set of unit-conversion scale factors and a uniform gas temperature rather
 // than deriving them, so they're exposed here as config rather than
-// hardcoded -- but default to the exact values that produced Maya's
-// historically-good grids, so an unmodified config reproduces them.
+// hardcoded -- but default to the exact values that produced the
+// historically-validated grids, so an unmodified config reproduces them.
 //
 // sim_id/plist (the 5 POLARIS GRID data-quantity IDs, in fixed order:
 // [gas temperature, vx, vy, vz, gas density]) are NOT configurable yet --
@@ -170,7 +170,7 @@ struct PolarisWriterConfig {
 // cartesian_map.hpp for the algorithm: for each Cartesian grid-cell center,
 // find the enclosing Voronoi cell via voro++'s own nearest-site search and
 // copy that cell's density/velocity across. Direct port of the approach in
-// Maya's own grid-3d-cartesian-map.cc.
+// the original grid-3d-cartesian-map.cc.
 //
 // resolution is cells per axis (the domain must be a cube, same requirement
 // write_polaris_grid() already has) -- the ~500 legacy default is a lot of
@@ -181,7 +181,7 @@ struct CartesianMapConfig {
     int resolution = 128;
 };
 
-// Stage: "development one" -- a wholly independent SPH -> Cartesian grid
+// Stage: sph-to-grid -- a wholly independent SPH -> Cartesian grid
 // mapping, computed directly (no voro++, no buffer, no Lloyd, no
 // tessellation) rather than resampling the Voronoi pipeline's output like
 // CartesianMapConfig/cartesian_map.hpp does. See cartesian_grid.hpp for the
@@ -189,8 +189,8 @@ struct CartesianMapConfig {
 //
 // Deliberately a separate, self-contained knob set from MappingConfig
 // rather than reusing it -- these two mapping paths are meant to stay
-// wholly independent of one another (per Maya's own framing: "a separate
-// path through the tool... without buffer or Lloyd's iterations"), so a
+// wholly independent of one another (sph-to-grid is a separate path through
+// the tool, without buffer or Lloyd iterations), so a
 // change to one's config shouldn't have to reason about the other.
 //
 // resolution: cells per axis, used for all 3 axes UNLESS overridden below --
@@ -230,7 +230,7 @@ struct Config {
     std::string input_snapshot; // raw SPH snapshot file -- see input_snapshot_format
     // "auto" (default): detect between the two formats below by sniffing the
     // file (see detect_snapshot_format() in snapshot.hpp). "dale_phantom":
-    // Maya's original 9-column, no-header Phantom ASCII dump (x y z vx vy vz
+    // The original 9-column, no-header Phantom ASCII dump (x y z vx vy vz
     // m h rho). "splash_ascii": output of `splash to ascii` (SPLASH repo) --
     // commented header, then per-particle data whose column count/order is
     // read from the header line itself (not hardcoded -- it varies between

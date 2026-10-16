@@ -518,8 +518,7 @@ double compute_face_integral(double x0, double y0, double z0, double h,
     //
     // Both facts are necessarily face-level, not per-edge -- a single edge
     // being "far" says nothing about the face as a whole (this fixes a bug:
-    // see the earlier version of this comment / project notes for how the
-    // previous per-edge vertex-only distance under this same variable name
+    // the previous per-edge vertex-only distance under this same variable name
     // silently dropped whole neighbor cells whenever a particle's kernel
     // crossed a large face away from every corner, e.g. a small-h particle
     // inside a coarse/lattice Voronoi cell).

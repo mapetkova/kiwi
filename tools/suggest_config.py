@@ -90,7 +90,7 @@ actually runs (numpy is the same dependency the earlier cube-extraction test
 scripts in this project already used).
 
 Snapshot format: two raw SPH snapshot formats are recognized, matching
-load_sph_snapshot() in snapshot.cpp exactly -- "dale_phantom" (Maya's
+load_sph_snapshot() in snapshot.cpp exactly -- "dale_phantom" (the
 original 9-column, no-header Phantom ASCII dump: x y z vx vy vz m h rho) and
 "splash_ascii" (output of `splash to ascii`, from the SPLASH repo:
 github.com/danieljprice/splash -- a commented header/preamble followed by
@@ -113,7 +113,7 @@ def eprint(*args, **kwargs):
 def detect_snapshot_format(path):
     """Mirrors detect_snapshot_format() in snapshot.cpp exactly: sniffs the
     file's first line for the `splash to ascii` signature comment; anything
-    else is assumed to be Maya's original dale_phantom format (no header at
+    else is assumed to be the original dale_phantom format (no header at
     all). Returns "dale_phantom" or "splash_ascii" -- never "auto"."""
     with open(path) as f:
         first_line = f.readline()
@@ -333,7 +333,7 @@ def _load_splash_ascii(path):
     physics modules a given Phantom run had switched on (see
     write_sphdump(), SPLASH's own write_sphdata.f90), and even whether an
     itype column is written at all depends on whether the dump has more
-    than one particle type. `pressure` (present in Maya's brick_01000
+    than one particle type. `pressure` (present in the original brick_01000
     snapshots) is recognized as a known label but never required or kept,
     since nothing downstream of this script uses it.
 
@@ -602,7 +602,7 @@ def compute_center_of_mass(snap):
 
 
 def compute_densest_region(snap, precision_fraction=1.0 / 128.0):
-    """Maya's iterative sliding-box density-peak search: start with a cubic
+    """Iterative sliding-box density-peak search: start with a cubic
     box spanning the whole particle set; repeatedly halve the box size,
     slide it across the *current* box in steps of a fixed precision `dx`
     (= precision_fraction * the starting box's side, held constant across
@@ -614,7 +614,7 @@ def compute_densest_region(snap, precision_fraction=1.0 / 128.0):
 
     Implemented with a 3D histogram + integral image (summed-area table)
     per round rather than literally sliding a window particle-by-particle:
-    equivalent to Maya's brute-force description (same box sizes, same dx
+    equivalent to the brute-force description (same box sizes, same dx
     step, same "most particles wins" rule -- verified in testing against an
     actual brute-force reference on synthetic data), just fast enough to
     run on real snapshots. Each round bins only the particles still inside
@@ -786,7 +786,7 @@ def run_interactive_zoom_assistance(snap, geometric_center, com_center, densest_
     side = initial_side
     # Tracks the last coordinates typed at the 'u' prompt, if any -- shown as its own
     # persistent marker (distinct from the current box) so it stays visible even after
-    # switching to compare against geometric/com/densest, per Maya's request.
+    # switching to compare against geometric/com/densest.
     user_center = dict(initial_center) if initial_center_mode == "user" else None
 
     fig, (ax_xy, ax_xz) = plt.subplots(1, 2, figsize=(13, 6.5))

@@ -41,10 +41,9 @@ constexpr char kMagic[8] = {'V', 'G', 'T', 'C', 'G', 'R', 'D', '2'};
 // This is deliberately fixed geometry, not something to hand-tune per call
 // site: getting a face's winding backward silently flips that face's sign
 // contribution to Msum rather than erroring. Validated two independent ways
-// before settling on this winding (see the project notes for the full
-// writeup): (1) a synthetic cube face-integral test (a large box fully
-// enclosing an h=1 particle's kernel support must sum to Msum == 1.0, the
-// kernel's own normalization) and (2) an end-to-end ground truth -- a
+// before settling on this winding: (1) a synthetic cube face-integral test
+// (a large box fully enclosing an h=1 particle's kernel support must sum to
+// Msum == 1.0, the kernel's own normalization) and (2) an end-to-end ground truth -- a
 // single SPH particle centered in a cubic domain has exactly one Voronoi
 // cell (the whole domain box), so running the existing, already-validated
 // `kiwi map` pipeline on that exact setup gives an independent

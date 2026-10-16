@@ -52,8 +52,8 @@ Tessellation run_tessellation_stage(const Config& cfg);
 // Diagnostics mirroring grid-file.cc's own printf checks: cells with
 // non-positive volume, and the count of input points that didn't produce a
 // computed cell at all (voro++'s compute_cell() can return false for a
-// point in a degenerate configuration -- see the Lloyd-stage discussion in
-// the project notes for a concrete example of this at a domain wall).
+// point in a degenerate configuration -- e.g. at a domain wall during Lloyd
+// relaxation).
 struct TessellationDiagnostics {
     std::vector<int> zero_or_negative_volume_ids;
     std::vector<int> missing_cell_ids; // present in input, absent from output

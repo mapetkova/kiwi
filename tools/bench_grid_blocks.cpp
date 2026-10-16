@@ -1,6 +1,5 @@
 // Throwaway benchmark harness for the grid_blocks/guess_optimal() investigation
-// (Maya's optimization item (a)). NOT part of the shipped tool -- lives only in
-// the dev tree, not part of the shipped tree.
+// (optimization item (a)). Not part of the kiwi CLI itself.
 //
 // guess_optimal(nx,ny,nz) (third_party/voro/src/pre_container.cc) completely
 // overwrites whatever nx/ny/nz it's given -- see the header comment in

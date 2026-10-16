@@ -61,8 +61,7 @@ namespace {
 // then genuinely lock-free -- and because it's a pure nearest-site lookup
 // with no floating-point summation order to vary, every thread's container
 // finds bit-for-bit the same answer for the same query point regardless of
-// how many threads are running (verified in the delivery validation, see
-// the project notes -- this is a stronger guarantee than the mapping
+// how many threads are running (verified during validation -- this is a stronger guarantee than the mapping
 // stage's own ~1e-13 floating-point noise floor from summation order).
 std::unique_ptr<voro::container> build_container(const PointSet& points, const Domain& d,
                                                    const GridBlocks& blocks) {

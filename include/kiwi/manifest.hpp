@@ -1,8 +1,7 @@
-// Provenance manifest -- the direct fix for the bug class that started this
-// whole engagement (see project notes: grid-file.cc silently reading
-// self-virialised density/velocity files against tidal grid geometry,
-// because every legacy tool's in-place toggle state told you nothing about
-// which state produced any already-generated file).
+// Provenance manifest -- the direct fix for a bug class in the legacy tools:
+// grid-file.cc silently read self-virialised density/velocity files against
+// tidal grid geometry, because every legacy tool's in-place toggle state
+// told you nothing about which state produced any already-generated file.
 //
 // Every stage in this tool is cached: if its output file already exists
 // under cfg.run_dir(), it's loaded instead of recomputed (see point_set.hpp,

@@ -7,7 +7,7 @@
 // cells actually being written, rather than the legacy code's `id - 1`
 // assumption (which silently produces wrong neighbor references whenever
 // any site in [1, max_id] failed to produce a tessellated cell -- rare, but
-// confirmed to happen; see the project notes). A neighbor reference to a
+// confirmed to happen). A neighbor reference to a
 // missing cell is dropped and counted, never miswired to the wrong row.
 #pragma once
 

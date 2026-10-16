@@ -57,7 +57,7 @@ DensityLookupTable load_density_table(const std::string& path);
 // This is a direct port of the grid this project's historical tabulated
 // tools were actually generated from -- CMacIonize's
 // SPHArrayInterface::gridding() (Vandenbroucke et al., not part of this
-// tool's own source, provided by Maya as the canonical reference to
+// tool's own source, provided as the canonical reference to
 // reproduce) -- not a new design: same fixed grid shape (nr01=50, nr02=199,
 // nR_01=nR_02=nphi1=nphi2=150; rl=0.1, mul=0.98, cphil=0.98, matching the
 // real density-map-grid-250-300-300.dat's own header exactly) and the same
@@ -156,7 +156,7 @@ double vertex_integral(const WallIntegralConstants& wall, const EdgeIntegralCons
 //  - mapping.cpp's compute_cell_integral(), fed voro++ polygon faces
 //    (arbitrary vertex count, from a Voronoi tessellation)
 //  - cartesian_grid.cpp's direct SPH-to-Cartesian-grid path
-//    ("development one"), fed the 6 axis-aligned rectangular faces (always
+//    (sph-to-grid), fed the 6 axis-aligned rectangular faces (always
 //    4 vertices) of a regular grid cell -- see that file for why the face's
 //    *shape* doesn't matter to this function at all: it's the same
 //    closed-form kernel line integral either way, just walked around

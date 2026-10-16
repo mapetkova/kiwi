@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(voro_grid_tool CXX)
+project(kiwi CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -70,8 +70,8 @@ target_include_directories(bench_grid_blocks PRIVATE ${CMAKE_SOURCE_DIR}/include
 
 # Permanent regression test: Voronoi tessellation of a simple cubic lattice
 # is exactly a partition into cubes -- see tools/test_lattice_grid.cpp. Also
-# the ground-truth reference fixture for validating "development one" (the
-# dedicated Cartesian-mapping rewrite).
+# the ground-truth reference fixture for validating sph-to-grid (the direct
+# SPH -> Cartesian mapping).
 add_executable(test_lattice_grid tools/test_lattice_grid.cpp)
 target_link_libraries(test_lattice_grid PRIVATE kiwi_core)
 target_include_directories(test_lattice_grid PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/third_party)

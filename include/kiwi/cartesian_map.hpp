@@ -3,7 +3,7 @@
 // tools/plot_cartesian_map.py). NOT part of the pipeline's data contract,
 // purely a convenience output.
 //
-// Direct port of the algorithm in Maya's own grid-3d-cartesian-map.cc: for
+// Direct port of the algorithm in the original grid-3d-cartesian-map.cc: for
 // each Cartesian grid-cell center inside cfg.domain, find the enclosing
 // Voronoi cell via voro++'s own nearest-site search
 // (container::find_voronoi_cell(), which is exactly "the particle whose
@@ -11,16 +11,10 @@
 // container -- see its own docstring) and copy that cell's density/velocity
 // across.
 //
-// This is what Maya called "development two": resampling output the
-// Voronoi pipeline ALREADY produced, for visualization. It is distinct from
-// her "development one" (an independent Cartesian mapping pipeline that
-// runs SPH particles directly onto Cartesian cells, in parallel with this
-// tool's own buffer/Lloyd/kernel-integral density mapping, sharing this
-// tool's own data structures) -- tessellation.hpp already calls out that
-// exact seam ("the seam where a Cartesian... grid backend can be swapped in
-// later without touching the mapping or writer stages") for development
-// one, deliberately not touched here. Development one is explicitly
-// deferred for now, per Maya's own request.
+// This stage resamples output the Voronoi pipeline ALREADY produced, for
+// visualization. It is distinct from sph-to-grid (cartesian_grid.hpp), an
+// independent Cartesian mapping that runs SPH particles directly onto
+// Cartesian cells, without buffer, Lloyd or tessellation.
 #pragma once
 
 #include <string>

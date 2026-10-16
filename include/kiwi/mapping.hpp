@@ -6,8 +6,7 @@
 // did their own independent breadth-first walk over the tessellation,
 // re-evaluating the same expensive SPH kernel line integral per
 // (particle, cell) pair -- once to accumulate mass for density, once again
-// to accumulate mass-weighted velocity. Per explicit instruction, this stage
-// merges them: a single BFS walk evaluates the integral once per
+// to accumulate mass-weighted velocity. This stage merges them: a single BFS walk evaluates the integral once per
 // (particle, cell) pair and accumulates both outputs from that one value.
 //
 // Smoothing (the legacy issmooth/smoothfact knobs) is dropped entirely, not
@@ -50,7 +49,7 @@ MappingResult run_mapping_stage(const Config& cfg);
 // mapping, adapted from CMacIonize's Petkova ionic-fraction inverse mapping
 // (SPHArrayInterface::InverseMappingFunction, SPHARRAY_MAPPING_PETKOVA
 // branch; Petkova et al. 2021) to particle mass instead. Restricted to the
-// "testing step" case Maya asked for first: recovering each particle's mass
+// "testing step" case: recovering each particle's mass
 // from the SAME grid that particle distribution already forward-mapped onto
 // via run_mapping_stage() -- NOT a grid-agnostic standalone inverse mapping
 // (that needs a second BFS pass; see mapping.cpp for why, and the "second

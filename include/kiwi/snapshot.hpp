@@ -4,7 +4,7 @@
 //
 // Two file formats are recognized:
 //
-//   "dale_phantom": Maya's original Dale-et-al.-2019-style Phantom ASCII
+//   "dale_phantom": the original Dale-et-al.-2019-style Phantom ASCII
 //   dump, no header line, 9 whitespace-separated columns per particle --
 //     x  y  z  vx  vy  vz  m  h  rho
 //   (m is constant across particles for an equal-mass SPH run; h is the
@@ -34,8 +34,8 @@
 //   (smoothing length) or density are required; anything else present
 //   (pressure, alpha, div_v, poten, dt, or an unrecognized physics-module
 //   column) is read past but not kept -- `pressure` in particular is NOT
-//   needed by anything downstream, even though real files from Maya's
-//   pipeline carry it. If only one of h/density is present, the other is
+//   needed by anything downstream, even though real files from the
+//   original pipeline carry it. If only one of h/density is present, the other is
 //   derived via h = 1.2*(m/rho)^(1/3) (Price et al. 2018, eq. 6; the sign
 //   matters -- (m/rho)^(-1/3) would be backwards), converting through
 //   Msun/pc^3 first since m/h/density are written in three different unit
