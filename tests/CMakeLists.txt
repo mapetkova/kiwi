@@ -4,6 +4,8 @@
 #   synthetic_pipeline    end-to-end run on a synthetic SPH cloud; checks mass conservation and
 #                         velocity recovery for sph-to-grid and the full Voronoi pipeline.
 #                         Needs python3 (standard library only).
+#   kernel_tables         derived kernel-integral coefficient tables vs brute-force quadrature
+#                         (tools/kernel_tables). Needs python3 (standard library only).
 
 add_test(NAME lattice_tessellation COMMAND test_lattice_grid)
 
@@ -12,6 +14,8 @@ if(Python3_FOUND)
   add_test(NAME synthetic_pipeline
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/synthetic_test.py
                    $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/synthetic_work)
+  add_test(NAME kernel_tables
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/verify.py 4)
 else()
-  message(STATUS "python3 not found: skipping the synthetic_pipeline test")
+  message(STATUS "python3 not found: skipping the synthetic_pipeline and kernel_tables tests")
 endif()
