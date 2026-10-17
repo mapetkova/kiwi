@@ -76,6 +76,13 @@ add_executable(test_lattice_grid tools/test_lattice_grid.cpp)
 target_link_libraries(test_lattice_grid PRIVATE kiwi_core)
 target_include_directories(test_lattice_grid PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/third_party)
 
+# Regression test for the generic-kernel analytic integral (kiwi/kernel_integral_generic.hpp): the
+# cubic spline must match the hand-written full_integral_new(), and all six kernels must match a
+# brute-force quadrature of the kernel definition. See tools/test_generic_kernel.cpp.
+add_executable(test_generic_kernel tools/test_generic_kernel.cpp)
+target_link_libraries(test_generic_kernel PRIVATE kiwi_core)
+target_include_directories(test_generic_kernel PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/third_party)
+
 # Particle-only smoothing-length routine (Phantom-style neighbour-density
 # iteration) -- first piece of the standalone inverse-mapping tool's particle
 # machinery, built and validated independently before folding it in. See
