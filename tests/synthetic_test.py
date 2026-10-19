@@ -9,6 +9,10 @@ uniform bulk velocity), runs KIWI on it, and checks physical invariants that mus
   cartesian-map the same checks through the full Voronoi pipeline
                 (point-set -> tessellate -> map -> cartesian-map), with a looser mass tolerance
                 because that path samples the Voronoi cells onto the Cartesian grid.
+  kernels       the same two checks for every other kernel (quartic, quintic, Wendland C2/C4/C6),
+                with each snapshot's h scaled so the kernel support radius is the same as the cubic
+                spline's; plus the cubic spline forced through the generic integral
+                (kernel.generic_path) must reproduce the default cubic result.
 
 Usage: synthetic_test.py <path-to-kiwi-executable> [work_dir]
 Exit code 0 on success, 1 on any failure (this is what ctest looks at).
@@ -30,7 +34,15 @@ HALF_DOMAIN = 6.0  # domain is [-6, 6]^3, a cube
 RES = 48
 
 
-def write_snapshot(path):
+# name -> support radius in units of h (SPLASH/Phantom convention, the config default)
+KERNELS = {"quartic_spline": 2.5, "quintic_spline": 3.0, "wendland_c2": 2.0, "wendland_c4": 2.0,
+           "wendland_c6": 2.0}
+# the (slower) Voronoi pipeline is run for the kernels that stress it most: the widest support and the
+# highest polynomial order
+VORONOI_KERNELS = ("quintic_spline", "wendland_c6")
+
+
+def write_snapshot(path, h_scale=1.0):
     """dale_phantom format: `x y z vx vy vz m h rho`, no header. Particles sit in a Gaussian blob
     (sigma 1, truncated at 2.5 sigma) well inside the domain; h is set from a local-density
     estimate that is only roughly right, which is fine -- mass conservation doesn't need an
@@ -47,7 +59,7 @@ def write_snapshot(path):
             r2 = x * x + y * y + z * z
             rho = N_PART * PART_MASS / (2 * math.pi) ** 1.5 * math.exp(-0.5 * r2)
             rho = max(rho, 1e-3)
-            h = 1.2 * (PART_MASS / rho) ** (1.0 / 3.0)
+            h = h_scale * 1.2 * (PART_MASS / rho) ** (1.0 / 3.0)
             f.write(f"{x:.8e} {y:.8e} {z:.8e} {BULK_V[0]} {BULK_V[1]} {BULK_V[2]} "
                     f"{PART_MASS:.8e} {h:.8e} {rho:.8e}\n")
     return N_PART * PART_MASS
@@ -140,6 +152,7 @@ def main():
     cfg, path = config("direct", {"cartesian_grid": {"resolution": RES}})
     run(kiwi, "sph-to-grid", path)
     out = os.path.join(cfg["work_folder"], os.listdir(cfg["work_folder"])[0], "cartesian_grid.dat")
+    out_direct = out
     dims, *rest = load_grid(out, b"VGTCGRD2", 3)  # magic kept for file-format compatibility
     ok &= check("direct: grid shape", dims == (RES, RES, RES), str(dims))
     ok &= verify("direct", (dims, *rest), true_mass, 1e-6)
@@ -156,6 +169,44 @@ def main():
         arrays = [read_doubles(f, n) for _ in range(4)]
     ok &= check("voronoi: grid shape", res == RES, str(res))
     ok &= verify("voronoi", ((res, res, res), b, *arrays), true_mass, 2e-2)
+
+    print("cubic spline through the generic integral (kernel.generic_path) vs the default fast path")
+    cfg_g, path_g = config("direct_generic", {"cartesian_grid": {"resolution": RES}, "kernel": {"generic_path": True}})
+    run(kiwi, "sph-to-grid", path_g)
+    out_g = os.path.join(cfg_g["work_folder"], os.listdir(cfg_g["work_folder"])[0], "cartesian_grid.dat")
+    ref, gen = load_grid(out_direct, b"VGTCGRD2", 3), load_grid(out_g, b"VGTCGRD2", 3)
+    dmax = max(ref[2])
+    worst = max(abs(a - b) for a, b in zip(ref[2], gen[2])) / dmax
+    ok &= check("generic cubic == fast-path cubic", worst < 1e-8, f"max |d density|/max density = {worst:.2e}")
+
+    for name, radkern in KERNELS.items():
+        print(f"kernel {name} (support {radkern} h)")
+        ksnap = os.path.join(work, f"synthetic_snapshot_{name}.out")
+        kmass = write_snapshot(ksnap, h_scale=2.0 / radkern)
+
+        def kconfig(tag, extra):
+            c, p = config(tag, dict(extra, kernel={"name": name}))
+            c["input_snapshot"] = ksnap
+            with open(p, "w") as f:
+                json.dump(c, f, indent=2)
+            return c, p
+
+        cfg, path = kconfig(name + "_direct", {"cartesian_grid": {"resolution": RES}})
+        run(kiwi, "sph-to-grid", path)
+        gout = os.path.join(cfg["work_folder"], os.listdir(cfg["work_folder"])[0], "cartesian_grid.dat")
+        ok &= verify(name + " direct", load_grid(gout, b"VGTCGRD2", 3), kmass, 1e-6)
+
+        if name not in VORONOI_KERNELS:
+            continue
+        cfg, path = kconfig(name + "_voronoi", {"cartesian_map": {"resolution": RES}})
+        run(kiwi, "cartesian-map", path)
+        vout = os.path.join(cfg["work_folder"], os.listdir(cfg["work_folder"])[0], "cartesian_map.dat")
+        with open(vout, "rb") as f:
+            assert f.read(8) == b"VGTCMAP1"
+            res = struct.unpack("<i", f.read(4))[0]
+            b = read_doubles(f, 6)
+            arrays = [read_doubles(f, res ** 3) for _ in range(4)]
+        ok &= verify(name + " voronoi", ((res, res, res), b, *arrays), kmass, 2e-2)
 
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1

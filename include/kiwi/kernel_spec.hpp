@@ -26,6 +26,8 @@ struct KernelSpec {
     double c[MAX_REGIONS];   // breakpoints c_1..c_n in units of H (c[nreg-2] == 1)
     double A2_pi, A3_pi; // normalisation constants times pi: A_d = A_d_pi / pi
     double radkern;      // support radius H in units of the snapshot smoothing length h (SPLASH/Phantom convention)
+    double hfact;        // Phantom's default h = hfact * (m/rho)^(1/3) for this kernel (used only to derive h or rho
+                         // when a snapshot lacks one of them; override with kernel.hfact)
 
     // 3D vertex-pyramid coefficients: d I_P / d phi = A_3 * [ sum_{i != 0} a[k][1-i] mu^i q0^(1-i)
     //                                                         + B[j][k](q0) ]    (mu = r0 / r, q0 = r0 / H)

@@ -282,7 +282,7 @@ std::vector<std::string> split_splash_ascii_labels(const std::string& header_lin
     return labels;
 }
 
-SPHSnapshot load_splash_ascii(const std::string& path) {
+SPHSnapshot load_splash_ascii(const std::string& path, double hfact) {
     int data_start = find_splash_ascii_data_start(path);
     if (data_start == 0)
         throw std::runtime_error(
@@ -348,7 +348,8 @@ SPHSnapshot load_splash_ascii(const std::string& path) {
                      "treating every row as gas: " << path << "\n";
     }
     if (have_h != have_rho) {
-        // h = hfact*(m/rho)^(1/3), hfact = 1.2 -- Price et al. 2018 (the Phantom paper), eq. 6.
+        // h = hfact*(m/rho)^(1/3), hfact = 1.2 for the cubic spline -- Price et al. 2018 (the Phantom paper), eq. 6.
+        // hfact is the caller's (Config::kernel_hfact(): per-kernel Phantom default, or kernel.hfact).
         // Note this is the *inverse* of (m/rho)^(-1/3): that exponent sign would make h grow
         // with density, which is backwards (denser gas is more highly resolved -> smaller h).
         //
@@ -368,14 +369,14 @@ SPHSnapshot load_splash_ascii(const std::string& path) {
                 "splash-ascii snapshot: only a '" + std::string(have_h ? "h" : "density") +
                 "' column was found, and this tool only knows how to derive the other from it "
                 "when mass is in M_Sun, h is in pc, and density is in g/cm^3 (the h = "
-                "1.2*(m/rho)^(1/3) relation needs m, h, and rho in a mutually consistent unit "
+                "hfact*(m/rho)^(1/3) relation needs m, h, and rho in a mutually consistent unit "
                 "system) -- got mass unit '" + m_unit + "' and " +
                 (have_h ? "h" : "density") + " unit '" + present_unit + "' instead. Extend "
                 "this derivation before using it on a file in different units: " + path);
         std::cerr << "[kiwi] splash-ascii snapshot: only a '" << (have_h ? "h" : "density")
                   << "' column was found in the header -- deriving "
                   << (have_h ? "density from h" : "h from density")
-                  << " via h = 1.2*(m/rho)^(1/3) (Price et al. 2018, eq. 6), converting "
+                  << " via h = hfact*(m/rho)^(1/3) with hfact = " << hfact << " (Price et al. 2018, eq. 6), converting "
                      "through Msun/pc^3 since density is in g/cm^3 but mass and h aren't: "
                   << path << "\n";
     }
@@ -422,7 +423,7 @@ SPHSnapshot load_splash_ascii(const std::string& path) {
             // match every other splash_ascii density column -- so derive in Msun/pc^3 first
             // (the unit system the hfact relation actually needs) and convert at the end.
             h = vals[static_cast<size_t>(idx_h)];
-            double ratio = h / 1.2;
+            double ratio = h / hfact;
             double rho_msun_pc3 = (ratio > 0.0) ? m / (ratio * ratio * ratio) : 0.0;
             rho = rho_msun_pc3 * msun_pc3_to_g_cm3();
         } else {
@@ -431,7 +432,7 @@ SPHSnapshot load_splash_ascii(const std::string& path) {
             // the resulting h comes out in pc, matching every other splash_ascii h column.
             rho = vals[static_cast<size_t>(idx_rho)];
             double rho_msun_pc3 = rho / msun_pc3_to_g_cm3();
-            h = (m > 0.0 && rho_msun_pc3 > 0.0) ? 1.2 * std::cbrt(m / rho_msun_pc3) : 0.0;
+            h = (m > 0.0 && rho_msun_pc3 > 0.0) ? hfact * std::cbrt(m / rho_msun_pc3) : 0.0;
         }
 
         ++row;
@@ -478,12 +479,12 @@ std::string detect_snapshot_format(const std::string& path) {
     return "dale_phantom";
 }
 
-SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format) {
+SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format, double hfact) {
     std::string resolved = format;
     if (resolved == "auto") resolved = detect_snapshot_format(path);
 
     if (resolved == "dale_phantom") return load_dale_phantom(path);
-    if (resolved == "splash_ascii") return load_splash_ascii(path);
+    if (resolved == "splash_ascii") return load_splash_ascii(path, hfact);
     throw std::runtime_error(
         "unknown SPH snapshot format '" + format + "' (expected auto, dale_phantom, or "
         "splash_ascii)");

@@ -13,6 +13,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "..", "src", "kernel_spec_data.cpp")
 NI, NB, NR = 15, 16, 4
 RADKERN = {"M4": 2.0, "M5": 2.5, "M6": 3.0, "WC2": 2.0, "WC4": 2.0, "WC6": 2.0}
+# Phantom defaults (kernel_*.f90 hfact_default; M4 from the Phantom paper): h = hfact * (m/rho)^(1/3)
+HFACT = {"M4": 1.2, "M5": 1.1, "M6": 1.0, "WC2": 1.3, "WC4": 1.5, "WC6": 1.6}
 ALIASES = {"M4": ["cubic", "cubic_spline", "m4"], "M5": ["quartic", "quartic_spline", "m5"],
            "M6": ["quintic", "quintic_spline", "m6"], "WC2": ["wendland_c2", "wendlandc2", "wc2"],
            "WC4": ["wendland_c4", "wendlandc4", "wc4"], "WC6": ["wendland_c6", "wendlandc6", "wc6"]}
@@ -27,7 +29,7 @@ def block(key, K):
     lines = [f"    {{ // {K.name}", f'        "{key}", "{K.name}", {nreg},']
     cs = [num(c) for c in K.breaks] + ["0.0"] * (NR - len(K.breaks))
     lines.append("        {" + ", ".join(cs) + "},")
-    lines.append(f"        {num(K.norm(2))}, {num(K.norm(3))}, {RADKERN[key]},")
+    lines.append(f"        {num(K.norm(2))}, {num(K.norm(3))}, {RADKERN[key]}, {HFACT[key]},")
     rows = []
     for k in range(1, NR + 1):
         row = [Fr(0)] * NI

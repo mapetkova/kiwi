@@ -90,7 +90,11 @@ std::string detect_snapshot_format(const std::string& path);
 // "dale_phantom", or "splash_ascii". Throws std::runtime_error for any other
 // value, an unreadable file, or a file that doesn't parse as the resolved
 // format.
-SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format = "auto");
+//
+// `hfact` is the factor in h = hfact * (m/rho)^(1/3), used only for a splash_ascii snapshot that has a
+// density or an h column but not both (default 1.2, the Phantom cubic-spline value; Config::kernel_hfact()
+// gives the per-kernel value).
+SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format = "auto", double hfact = 1.2);
 
 // Just the positions, as a PointSet ready for the buffer/Lloyd/tessellation
 // stages (which don't need to know anything about velocity/mass/density).

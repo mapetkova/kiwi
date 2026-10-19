@@ -17,6 +17,7 @@
 
 #include "voro++.hh"
 #include "kiwi/kernel_integral.hpp"
+#include "kiwi/kernel_integrator.hpp"
 #include "kiwi/point_set.hpp"
 #include "kiwi/snapshot.hpp"
 #include "kiwi/voro_grid.hpp"
@@ -109,7 +110,7 @@ int64_t face_cache_key(int a, int b) {
 // cell out to every cell its smoothing kernel overlaps.
 double compute_cell_integral(
     int ind, int cell_idx, double x0, double y0, double z0, double h,
-    bool use_tabulated_integral, const DensityLookupTable* table,
+    const KernelIntegrator& kernel,
     const std::vector<double>& x_list, const std::vector<double>& y_list, const std::vector<double>& z_list,
     const std::vector<CellFaceGeometry>& cell_geom,
     const std::vector<int>& reverse_id_list,
@@ -182,8 +183,7 @@ double compute_cell_integral(
         }
 
         int out_vert = 0;
-        double face_Msum = compute_face_integral(x0, y0, z0, h, use_tabulated_integral, table,
-                                                   face_verts, &out_vert);
+        double face_Msum = kernel.face(x0, y0, z0, h, face_verts, &out_vert);
 
         Msum += face_Msum;
         if (cacheable) {
@@ -345,9 +345,10 @@ MappingResult run_mapping_stage(const Config& cfg) {
     }
 
     DensityLookupTable table = load_or_generate_density_table(cfg.mapping);
+    const KernelIntegrator kernel = make_kernel_integrator(cfg, cfg.mapping.use_tabulated_integral, &table);
 
     PointSet points = run_point_set_stage(cfg);
-    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format);
+    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact());
     std::cerr << "[kiwi] loaded " << points.size() << " grid points, " << snap.size() << " SPH particles\n";
 
     // One voronoicell_neighbor is computed at a time and immediately reduced
@@ -455,8 +456,7 @@ MappingResult run_mapping_stage(const Config& cfg) {
 
         while (next_list_bottom < next_list_top) {
             int cell_idx = next_list[next_list_bottom];
-            double integral = compute_cell_integral(ind, cell_idx, x0, y0, z0, h,
-                                                      cfg.mapping.use_tabulated_integral, &table,
+            double integral = compute_cell_integral(ind, cell_idx, x0, y0, z0, h, kernel,
                                                       x_list, y_list, z_list, cell_geom, reverse_id_list,
                                                       kernel_list, next_list, next_list_top, face_cache);
             dens_cells[cell_idx] += integral * m;
@@ -571,9 +571,10 @@ InverseMappingTestResult run_inverse_mapping_test_stage(const Config& cfg) {
     }
 
     DensityLookupTable table = load_or_generate_density_table(cfg.mapping);
+    const KernelIntegrator kernel = make_kernel_integrator(cfg, cfg.mapping.use_tabulated_integral, &table);
 
     PointSet points = run_point_set_stage(cfg);
-    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format);
+    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact());
     std::cerr << "[kiwi] inverse-mapping-test: loaded " << points.size() << " grid points, "
               << snap.size() << " SPH particles\n";
 
@@ -657,8 +658,7 @@ InverseMappingTestResult run_inverse_mapping_test_stage(const Config& cfg) {
         double recovered = 0.0;
         while (next_list_bottom < next_list_top) {
             int cell_idx = next_list[next_list_bottom];
-            double integral = compute_cell_integral(ind, cell_idx, x0, y0, z0, h,
-                                                      cfg.mapping.use_tabulated_integral, &table,
+            double integral = compute_cell_integral(ind, cell_idx, x0, y0, z0, h, kernel,
                                                       x_list, y_list, z_list, cell_geom, reverse_id_list,
                                                       kernel_list, next_list, next_list_top, face_cache);
             // weight_{a,i} * P_i, with P_i = M_i (see this stage's header

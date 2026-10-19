@@ -13,6 +13,7 @@
 #include <stdexcept>
 
 #include "nlohmann/json.hpp"
+#include "kiwi/kernel_spec.hpp"
 
 namespace kiwi {
 
@@ -83,6 +84,7 @@ struct LegacyBrickBufferParams {
 struct CoverageGridBufferParams {
     double spacing_fraction = 0.05;      // dx=dy=dz = this fraction of the domain's smallest extent
     double coverage_radius_factor = 2.0; // a candidate is "covered" if within factor*h of any particle
+                                         // (2 = the cubic spline's support; raise it for wider kernels)
 };
 
 struct BufferConfig {
@@ -223,6 +225,32 @@ struct CartesianGridConfig {
     std::string density_table;
 };
 
+// Which SPH kernel the snapshot was run with, and therefore which kernel the grid mapping integrates.
+// Everything here is optional; the defaults reproduce the cubic spline (M4) exactly as before.
+//
+// name: "cubic_spline" (default), "quartic_spline", "quintic_spline", "wendland_c2", "wendland_c4",
+//   "wendland_c6" (see kernel_spec.hpp for aliases).
+// support_radius_in_h: the kernel's support radius in units of the snapshot's smoothing length h; 0
+//   (default) means the SPLASH/Phantom convention for the chosen kernel (2 for the cubic spline and
+//   the Wendland kernels, 2.5 for the quartic, 3 for the quintic). Set it if the snapshot's h follows
+//   another convention (e.g. a code whose kernel vanishes at r = h would need 1).
+// hfact: only used when a splash_ascii snapshot lacks either h or density and one is derived from the
+//   other via h = hfact * (m/rho)^(1/3); 0 (default) means Phantom's default for the chosen kernel.
+// generic_path: false (default) runs the cubic spline through its original hand-written, optionally
+//   tabulated integral and every other kernel through the generic analytic one; true forces the
+//   generic analytic path even for the cubic spline (mainly for testing; incompatible with
+//   use_tabulated_integral, which only exists for the cubic spline).
+struct KernelConfig {
+    std::string name = "cubic_spline";
+    double support_radius_in_h = 0.0;
+    double hfact = 0.0;
+    bool generic_path = false;
+
+    bool is_default() const {
+        return name == "cubic_spline" && support_radius_in_h == 0.0 && hfact == 0.0 && !generic_path;
+    }
+};
+
 struct Config {
     std::string run_name;
     Domain domain;
@@ -246,6 +274,14 @@ struct Config {
     DiagnosticsConfig diagnostics;
     CartesianMapConfig cartesian_map;
     CartesianGridConfig cartesian_grid;
+    KernelConfig kernel;
+
+    // Resolved kernel settings (throw for an unknown kernel name).
+    const KernelSpec& kernel_spec() const;
+    double kernel_support_in_h() const; // support radius / h
+    double kernel_hfact() const;
+    // True when the generic analytic integral must be used instead of the cubic-spline fast path.
+    bool use_generic_kernel_path() const;
 
     static Config load_from_file(const std::string& path);
     nlohmann::json to_json() const;

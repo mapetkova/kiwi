@@ -15,6 +15,7 @@
 #endif
 
 #include "kiwi/kernel_integral.hpp"
+#include "kiwi/kernel_integrator.hpp"
 #include "kiwi/snapshot.hpp"
 
 namespace {
@@ -138,7 +139,9 @@ CartesianGridResult run_sph_to_grid_stage(const Config& cfg) {
         std::cerr << "[kiwi] using full_integral_new (analytic) -- no lookup table needed\n";
     }
 
-    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format);
+    const KernelIntegrator kernel = make_kernel_integrator(cfg, cfg.cartesian_grid.use_tabulated_integral, &table);
+
+    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact());
     std::cerr << "[kiwi] sph-to-grid: loaded " << snap.size() << " SPH particles (no point-set/"
                  "tessellation/mapping stage involved -- this path reads the snapshot directly)\n";
 
@@ -204,7 +207,7 @@ CartesianGridResult run_sph_to_grid_stage(const Config& cfg) {
 
         if (h <= 0.0) continue; // degenerate/invalid smoothing length -- no contribution
 
-        const double radius = 2.0 * h; // cubic-spline kernel support radius
+        const double radius = kernel.support(h); // kernel support radius
 
         // Arithmetic cell-index range this particle's kernel could reach --
         // no discovery/search at all, unlike run_mapping_stage()'s BFS (see
@@ -251,8 +254,7 @@ CartesianGridResult run_sph_to_grid_stage(const Config& cfg) {
                     // faces a Voronoi cell happens to have.
                     double Msum = 0.0;
                     for (int f = 0; f < 6; ++f) {
-                        Msum += compute_face_integral(x0, y0, z0, h, cfg.cartesian_grid.use_tabulated_integral,
-                                                        &table, faces[f]);
+                        Msum += kernel.face(x0, y0, z0, h, faces[f]);
                     }
 
                     // Same clamp as compute_cell_integral() applies to its

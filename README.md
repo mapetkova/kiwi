@@ -90,6 +90,22 @@ Useful options:
 
 - `buffer.strategy`: `"coverage_grid"` (general purpose) or `"legacy_brick"` (specific to one
   cloud geometry). A buffer of extra points keeps the cells at the domain edge finite.
+- `kernel`: the SPH kernel the snapshot was run with. Default is the cubic spline; the others are
+  `quartic_spline`, `quintic_spline`, `wendland_c2`, `wendland_c4` and `wendland_c6` (all analytic;
+  the tabulated integral exists only for the cubic spline):
+
+  ```json
+  "kernel": {"name": "wendland_c4"}
+  ```
+
+  The kernel's support radius is taken in units of the snapshot's smoothing length `h` following SPLASH
+  and Phantom (2h for the cubic spline and the Wendland kernels, 2.5h for the quartic, 3h for the
+  quintic); set `kernel.support_radius_in_h` if your `h` follows another convention. `kernel.hfact`
+  (default: Phantom's value for the chosen kernel) is only used to derive `h` or the density when a
+  `splash_ascii` snapshot lacks one of them. With a kernel wider than 2h, consider raising
+  `buffer.coverage_grid.coverage_radius_factor` (default 2) to match. `kernel.generic_path: true` runs
+  even the cubic spline through the generic integral, which should agree with the default path to
+  about 1e-11.
 - `mapping.use_tabulated_integral`: `false` (default) uses the analytic kernel integral. `true`
   uses a lookup table, which is faster but approximate.
 - `polaris_writer`: unit scales and temperature for the optional POLARIS output. The domain must
@@ -160,7 +176,12 @@ ctest --output-on-failure
 - `lattice_tessellation`: a Voronoi tessellation of a cubic lattice must be exact cubes.
 - `synthetic_pipeline`: builds a small synthetic SPH cloud with a known total mass and bulk velocity,
   runs `sph-to-grid` and the full Voronoi pipeline, and checks that mass is conserved and the
-  velocity is recovered. It needs Python 3 and nothing else.
+  velocity is recovered, for every kernel. It needs Python 3 and nothing else.
+- `generic_kernel`: the generic kernel integral against the hand-written cubic-spline one and against
+  brute-force quadrature, plus whole-cell mass checks, for all six kernels.
+- `kernel_tables`, `kernel_spec_data_current`: the kernel-integral coefficients (derived exactly in
+  `tools/kernel_tables/`, see its README) against brute-force quadrature, and a check that the
+  generated `src/kernel_spec_data.cpp` is up to date.
 
 The test data is generated on the fly, so nothing needs downloading.
 

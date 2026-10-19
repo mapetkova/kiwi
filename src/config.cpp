@@ -155,6 +155,28 @@ Config Config::load_from_file(const std::string& path) {
                                    "(0 means: fall back to resolution)");
         }
 
+        if (j.contains("kernel")) {
+            const auto& k = j["kernel"];
+            c.kernel.name = k.value("name", std::string("cubic_spline"));
+            c.kernel.support_radius_in_h = k.value("support_radius_in_h", 0.0);
+            c.kernel.hfact = k.value("hfact", 0.0);
+            c.kernel.generic_path = k.value("generic_path", false);
+            try {
+                (void)get_kernel(c.kernel.name);
+            } catch (const std::invalid_argument& e) {
+                throw ConfigError(std::string("kernel.name: ") + e.what());
+            }
+            if (c.kernel.support_radius_in_h < 0.0)
+                throw ConfigError("kernel.support_radius_in_h must be > 0 (or 0 / unset for the kernel's default)");
+            if (c.kernel.hfact < 0.0)
+                throw ConfigError("kernel.hfact must be > 0 (or 0 / unset for the kernel's default)");
+        }
+        if (c.use_generic_kernel_path() &&
+            (c.mapping.use_tabulated_integral || c.cartesian_grid.use_tabulated_integral))
+            throw ConfigError("use_tabulated_integral is only available for the cubic spline kernel with its "
+                              "default support radius (and kernel.generic_path unset); the selected kernel "
+                              "settings need the analytic integral -- set use_tabulated_integral to false");
+
         if (j.contains("polaris_writer")) {
             const auto& pw = j["polaris_writer"];
             c.polaris_writer.sim_id = pw.value("sim_id", (unsigned short)50);
@@ -214,7 +236,27 @@ json Config::to_json() const {
                             {"resolution_z", cartesian_grid.resolution_z},
                             {"use_tabulated_integral", cartesian_grid.use_tabulated_integral},
                             {"density_table", cartesian_grid.density_table}};
+    // Only written when something differs from the default, so the config (and the provenance manifest
+    // built from it) of a pre-existing cubic-spline run is unchanged by the existence of this section.
+    if (!kernel.is_default()) {
+        j["kernel"] = {{"name", kernel.name},
+                       {"support_radius_in_h", kernel.support_radius_in_h},
+                       {"hfact", kernel.hfact},
+                       {"generic_path", kernel.generic_path}};
+    }
     return j;
+}
+
+const KernelSpec& Config::kernel_spec() const { return get_kernel(kernel.name); }
+
+double Config::kernel_support_in_h() const {
+    return kernel.support_radius_in_h > 0.0 ? kernel.support_radius_in_h : kernel_spec().radkern;
+}
+
+double Config::kernel_hfact() const { return kernel.hfact > 0.0 ? kernel.hfact : kernel_spec().hfact; }
+
+bool Config::use_generic_kernel_path() const {
+    return kernel.generic_path || std::string(kernel_spec().key) != "M4" || kernel_support_in_h() != 2.0;
 }
 
 std::string Config::run_dir() const {
