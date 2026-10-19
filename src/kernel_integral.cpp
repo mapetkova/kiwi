@@ -1,4 +1,5 @@
 #include "kiwi/kernel_integral.hpp"
+#include "kiwi/kernel_integral_generic.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -424,9 +425,55 @@ double full_integral_new(double h, double phi, double r0, double R_0) {
 // f_vert/f_coord indexing to a plain flattened vertex array. See the header
 // declaration for the winding requirement and for how mapping.cpp and
 // cartesian_grid.cpp each use this.
-double compute_face_integral(double x0, double y0, double z0, double h,
-                              bool use_tabulated_integral, const DensityLookupTable* table,
-                              const std::vector<double>& vertices, int* out_vert) {
+namespace {
+
+// The per-face / per-edge / per-vertex kernel-integral evaluators that face_integral_impl() below is
+// parameterised on, so the face walk (geometry, sign logic, neighbour-discovery distance) exists
+// exactly once for both the cubic-spline fast path and the generic-kernel path.
+//   set_wall(ar0)   once per face, with the particle's unsigned distance to the face plane
+//   set_edge(R_0)   once per edge, with the in-plane distance from the particle's projection to the edge line
+//   at(phi)         once per edge vertex
+struct CubicFaceEvaluator {
+    double h;
+    bool tabulated;
+    const DensityLookupTable* table;
+    WallIntegralConstants wall;
+    EdgeIntegralConstants edge;
+    double ar0 = 0.0, R_0 = 0.0;
+
+    void set_wall(double ar0_) {
+        ar0 = ar0_;
+        // Wall-level kernel-integral constants (B1/B2/B3): a function of (h, ar0) alone, computed once per
+        // face and reused for every edge. Only meaningful (and only computed) on the analytic path.
+        if (!tabulated) wall = compute_wall_constants(h, ar0);
+    }
+    void set_edge(double R_0_) {
+        R_0 = R_0_;
+        // Edge-level constants (D2/D3): a function of (h, ar0, R_0) alone, shared between this edge's two
+        // vertex evaluations.
+        if (!tabulated) edge = compute_edge_constants(wall, R_0);
+    }
+    double at(double phi) const {
+        return tabulated ? gridded_integral(*table, h, phi, ar0, R_0) : vertex_integral(wall, edge, phi);
+    }
+};
+
+struct GenericFaceEvaluator {
+    const KernelSpec* K;
+    double H;
+    GenericWallConstants wall;
+    GenericEdgeConstants edge;
+
+    void set_wall(double ar0) { wall = generic_wall_constants(*K, H, ar0); }
+    void set_edge(double R_0) { edge = generic_edge_constants(wall, R_0); }
+    double at(double phi) const { return generic_vertex_integral(wall, edge, phi); }
+};
+
+// support_radius: the kernel's support (2h for the cubic spline); a face whose closest point to the
+// particle is at least this far away cannot lie inside the kernel, which is what out_vert reports.
+template <class Evaluator>
+double face_integral_impl(double x0, double y0, double z0, double support_radius,
+                          const std::vector<double>& vertices, int* out_vert, Evaluator& ev) {
     const int n = static_cast<int>(vertices.size() / 3);
     int out_vert_count = 0;
     double face_Msum = 0.0;
@@ -490,14 +537,7 @@ double compute_face_integral(double x0, double y0, double z0, double h,
     double s2 = x1r * (y2sr * z3sr - z2sr * y3sr) + y1r * (z2sr * x3sr - x2sr * z3sr) +
                 z1r * (x2sr * y3sr - y2sr * x3sr);
 
-    // Wall-level kernel-integral constants (B1/B2/B3): a function of (h, ar0)
-    // alone, computed once here and reused for every edge of this face --
-    // same hoist as mapping.cpp's loop. Only meaningful (and only computed)
-    // on the analytic path.
-    WallIntegralConstants wall_consts;
-    if (!use_tabulated_integral) {
-        wall_consts = compute_wall_constants(h, ar0);
-    }
+    ev.set_wall(ar0);
 
     // Neighbor-discovery distance: the true 3D distance from the particle to
     // the closest point of the (bounded, convex) face -- NOT to any single
@@ -586,19 +626,9 @@ double compute_face_integral(double x0, double y0, double z0, double h,
 
         double M = (s1 * s2 * r0 <= 0) ? -1.0 : 1.0;
 
-        // Edge-level kernel-integral constants (D2/D3): a function of
-        // (h, ar0, R_0) alone, shared between this edge's two vertex
-        // evaluations (phi1 and phi2) below -- same hoist as mapping.cpp's
-        // loop.
-        EdgeIntegralConstants edge_consts;
-        if (!use_tabulated_integral) {
-            edge_consts = compute_edge_constants(wall_consts, R_0);
-        }
+        ev.set_edge(R_0);
 
-        auto integral_at = [&](double phi_) {
-            return use_tabulated_integral ? gridded_integral(*table, h, phi_, ar0, R_0)
-                                           : vertex_integral(wall_consts, edge_consts, phi_);
-        };
+        auto integral_at = [&](double phi_) { return ev.at(phi_); };
 
         if (foot_beyond_endpoint) {
             if (phi1 >= phi2) {
@@ -620,10 +650,25 @@ double compute_face_integral(double x0, double y0, double z0, double h,
     // the boundary, at the smallest of the per-edge segment-clamped
     // distances found while walking the edges.
     double face_dist = inside_polygon ? ar0 : std::sqrt(r0 * r0 + min_edge_dist * min_edge_dist);
-    out_vert_count = (face_dist >= 2 * h) ? n : 0;
+    out_vert_count = (face_dist >= support_radius) ? n : 0;
 
     if (out_vert) *out_vert = out_vert_count;
     return face_Msum;
+}
+
+} // namespace
+
+double compute_face_integral(double x0, double y0, double z0, double h,
+                              bool use_tabulated_integral, const DensityLookupTable* table,
+                              const std::vector<double>& vertices, int* out_vert) {
+    CubicFaceEvaluator ev{h, use_tabulated_integral, table, {}, {}};
+    return face_integral_impl(x0, y0, z0, 2 * h, vertices, out_vert, ev);
+}
+
+double compute_face_integral_generic(double x0, double y0, double z0, const KernelSpec& K, double H,
+                                      const std::vector<double>& vertices, int* out_vert) {
+    GenericFaceEvaluator ev{&K, H, {}, {}};
+    return face_integral_impl(x0, y0, z0, H, vertices, out_vert, ev);
 }
 
 } // namespace kiwi

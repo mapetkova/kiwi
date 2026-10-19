@@ -4,6 +4,10 @@
 //     (H = 2h) at random (r0, R_0, phi);
 //  B. all six kernels: generic_full_integral() must agree with brute-force Gauss-Legendre quadrature
 //     of the kernel taken straight from its definition (the C++ twin of tools/kernel_tables/reference.py);
+//  D. whole-cell masses from compute_face_integral_generic() (boxes): the cubic spline matches
+//     compute_face_integral(); a box enclosing the support has mass exactly 1; masses of sub-boxes add
+//     up to the mass of the box they partition (this exercises the face-sign logic, including a
+//     particle outside the box).
 //  C. each kernel is normalised (4 pi * int W r^2 dr = 1) and I_P is continuous across region boundaries.
 //
 // Usage: test_generic_kernel [n_points_per_kernel]
@@ -113,6 +117,47 @@ double pyramid(const KernelSpec& K, double r0, double R0, double phi) {
 constexpr double ABS_TOL = 1e-12, REL_TOL = 1e-9;
 double err(double a, double b) { return std::fabs(a - b) / (ABS_TOL / REL_TOL + std::max(std::fabs(a), std::fabs(b))); }
 
+// The 6 faces of an axis-aligned box, wound as src/cartesian_grid.cpp's box_cell_faces() does
+// (the winding compute_face_integral*() needs).
+void box_faces(const double lo[3], const double hi[3], std::vector<double> faces[6]) {
+    const double xm = lo[0], xp = hi[0], ym = lo[1], yp = hi[1], zm = lo[2], zp = hi[2];
+    faces[0] = {xp, ym, zp, xp, yp, zp, xp, yp, zm, xp, ym, zm};
+    faces[1] = {xm, yp, zm, xm, yp, zp, xm, ym, zp, xm, ym, zm};
+    faces[2] = {xp, yp, zm, xp, yp, zp, xm, yp, zp, xm, yp, zm};
+    faces[3] = {xm, ym, zp, xp, ym, zp, xp, ym, zm, xm, ym, zm};
+    faces[4] = {xm, yp, zp, xp, yp, zp, xp, ym, zp, xm, ym, zp};
+    faces[5] = {xp, ym, zm, xp, yp, zm, xm, yp, zm, xm, ym, zm};
+}
+
+double box_mass_generic(const KernelSpec& K, double H, const double p[3], const double lo[3], const double hi[3],
+                        int* out_vert_sum = nullptr) {
+    std::vector<double> faces[6];
+    box_faces(lo, hi, faces);
+    double m = 0;
+    int ovs = 0;
+    for (auto& f : faces) {
+        int ov = 0;
+        m += compute_face_integral_generic(p[0], p[1], p[2], K, H, f, &ov);
+        ovs = ovs * 2 + (ov > 0);
+    }
+    if (out_vert_sum) *out_vert_sum = ovs;
+    return m;
+}
+
+double box_mass_cubic(double h, const double p[3], const double lo[3], const double hi[3], int* out_vert_sum = nullptr) {
+    std::vector<double> faces[6];
+    box_faces(lo, hi, faces);
+    double m = 0;
+    int ovs = 0;
+    for (auto& f : faces) {
+        int ov = 0;
+        m += compute_face_integral(p[0], p[1], p[2], h, false, nullptr, f, &ov);
+        ovs = ovs * 2 + (ov > 0);
+    }
+    if (out_vert_sum) *out_vert_sum = ovs;
+    return m;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -190,6 +235,61 @@ int main(int argc, char** argv) {
         }
         std::printf("C. %-4s jump of I_P across region boundaries: max %9.2e\n", K->key, worst);
         if (worst > 1e-7) { std::printf("  FAIL\n"); ++failures; }
+    }
+
+    // ---- D. cell masses from boxes
+    {
+        double worst_cubic = 0;
+        int ov_mismatch = 0;
+        for (int n = 0; n < 10 * npts; ++n) {
+            double H = 0.5 + 3.0 * U(rng), p[3] = {0, 0, 0}, lo[3], hi[3];
+            for (int d = 0; d < 3; ++d) {
+                double c = H * (U(rng) - 0.5) * 3.0, half = H * (0.05 + 1.2 * U(rng));
+                lo[d] = c - half; hi[d] = c + half;
+                p[d] = H * (U(rng) - 0.5) * 0.8;
+            }
+            int ovg = 0, ovc = 0;
+            double mg = box_mass_generic(get_kernel("cubic_spline"), H, p, lo, hi, &ovg);
+            double mc = box_mass_cubic(H / 2, p, lo, hi, &ovc);
+            worst_cubic = std::max(worst_cubic, err(mg, mc));
+            if (ovg != ovc) ++ov_mismatch;
+        }
+        std::printf("D1. cubic box masses, generic vs compute_face_integral: max scaled difference %9.2e, out_vert mismatches %d\n",
+                    worst_cubic, ov_mismatch);
+        if (worst_cubic > REL_TOL || ov_mismatch) { std::printf("  FAIL\n"); ++failures; }
+
+        for (const KernelSpec* K : all_kernels()) {
+            double worst_one = 0, worst_part = 0, worst_grid = 0;
+            for (int n = 0; n < 4 * npts; ++n) {
+                double H = 0.5 + 3.0 * U(rng), p[3], lo[3], hi[3];
+                for (int d = 0; d < 3; ++d) p[d] = H * (U(rng) - 0.5) * 2.0;
+                // a box enclosing the whole support has mass 1
+                for (int d = 0; d < 3; ++d) { lo[d] = p[d] - H * (1.0 + 2.0 * U(rng)); hi[d] = p[d] + H * (1.0 + 2.0 * U(rng)); }
+                worst_one = std::max(worst_one, std::fabs(box_mass_generic(*K, H, p, lo, hi) - 1.0));
+                // partition of a random box (particle anywhere, often outside) along a random axis
+                double blo[3], bhi[3];
+                for (int d = 0; d < 3; ++d) { double c = H * (U(rng) - 0.5) * 2.0, half = H * (0.1 + 0.9 * U(rng)); blo[d] = c - half; bhi[d] = c + half; }
+                int ax = n % 3;
+                double cut = blo[ax] + (bhi[ax] - blo[ax]) * (0.2 + 0.6 * U(rng));
+                double lo2[3] = {blo[0], blo[1], blo[2]}, hi1[3] = {bhi[0], bhi[1], bhi[2]};
+                hi1[ax] = cut; lo2[ax] = cut;
+                double whole = box_mass_generic(*K, H, p, blo, bhi);
+                double parts = box_mass_generic(*K, H, p, blo, hi1) + box_mass_generic(*K, H, p, lo2, bhi);
+                worst_part = std::max(worst_part, std::fabs(whole - parts));
+                // a 2x2x2 grid covering the whole support sums to 1
+                double mid[3], tot = 0;
+                for (int d = 0; d < 3; ++d) { lo[d] = p[d] - 1.3 * H; hi[d] = p[d] + 1.3 * H; mid[d] = lo[d] + (hi[d] - lo[d]) * (0.2 + 0.6 * U(rng)); }
+                for (int c = 0; c < 8; ++c) {
+                    double cl[3], ch[3];
+                    for (int d = 0; d < 3; ++d) { bool up = (c >> d) & 1; cl[d] = up ? mid[d] : lo[d]; ch[d] = up ? hi[d] : mid[d]; }
+                    tot += box_mass_generic(*K, H, p, cl, ch);
+                }
+                worst_grid = std::max(worst_grid, std::fabs(tot - 1.0));
+            }
+            std::printf("D2. %-4s box mass: |enclosing box - 1| %8.2e, |partition - whole| %8.2e, |2x2x2 grid - 1| %8.2e\n",
+                        K->key, worst_one, worst_part, worst_grid);
+            if (worst_one > 1e-10 || worst_part > 1e-10 || worst_grid > 1e-10) { std::printf("  FAIL\n"); ++failures; }
+        }
     }
 
     std::printf(failures ? "FAILED (%d)\n" : "all checks passed\n", failures);

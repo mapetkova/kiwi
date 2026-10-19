@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include "kiwi/kernel_spec.hpp"
+
 namespace kiwi {
 
 // Loaded from a "density-map-grid-<...>.dat" file: a 3D table of the kernel
@@ -197,5 +199,14 @@ double vertex_integral(const WallIntegralConstants& wall, const EdgeIntegralCons
 double compute_face_integral(double x0, double y0, double z0, double h,
                               bool use_tabulated_integral, const DensityLookupTable* table,
                               const std::vector<double>& vertices, int* out_vert = nullptr);
+
+// Generic-kernel twin of compute_face_integral(): identical face walk, sign logic and neighbour-
+// discovery rule, but the vertex integral comes from kernel_integral_generic.hpp for any kernel in
+// kernel_spec.hpp. H is the kernel's support radius in the same length units as the coordinates
+// (for the cubic spline, H = 2h); out_vert has the same meaning with 2h replaced by H. Always
+// analytic -- there is no lookup-table variant for the generic kernels. The winding requirement is
+// the one documented above.
+double compute_face_integral_generic(double x0, double y0, double z0, const KernelSpec& K, double H,
+                                      const std::vector<double>& vertices, int* out_vert = nullptr);
 
 } // namespace kiwi
