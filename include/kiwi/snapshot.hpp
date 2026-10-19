@@ -98,9 +98,9 @@ std::string detect_snapshot_format(const std::string& path);
 // density or an h column but not both (default 1.2, the Phantom cubic-spline value; Config::kernel_hfact()
 // gives the per-kernel value).
 //
-// `units` is only used for "phantom_binary" snapshots (see phantom_dump.hpp).
+// `units` and `allow_missing_velocity` are only used for "phantom_binary" snapshots (see phantom_dump.hpp).
 SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format = "auto", double hfact = 1.2,
-                              const PhantomUnits& units = PhantomUnits());
+                              const PhantomUnits& units = PhantomUnits(), bool allow_missing_velocity = false);
 
 // Just the positions, as a PointSet ready for the buffer/Lloyd/tessellation
 // stages (which don't need to know anything about velocity/mass/density).

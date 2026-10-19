@@ -186,6 +186,8 @@ Config Config::load_from_file(const std::string& path) {
                 throw ConfigError("phantom_units.length_cm / mass_g / velocity_cms must all be > 0");
         }
 
+        c.allow_missing_velocity = j.value("allow_missing_velocity", false);
+
         if (j.contains("polaris_writer")) {
             const auto& pw = j["polaris_writer"];
             c.polaris_writer.sim_id = pw.value("sim_id", (unsigned short)50);
@@ -253,6 +255,7 @@ json Config::to_json() const {
                        {"hfact", kernel.hfact},
                        {"generic_path", kernel.generic_path}};
     }
+    if (allow_missing_velocity) j["allow_missing_velocity"] = true;
     if (!phantom_units.is_default()) {
         j["phantom_units"] = {{"length_cm", phantom_units.length_cm},
                               {"mass_g", phantom_units.mass_g},

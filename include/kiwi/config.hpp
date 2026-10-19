@@ -292,6 +292,9 @@ struct Config {
     CartesianGridConfig cartesian_grid;
     KernelConfig kernel;
     PhantomUnits phantom_units;
+    // phantom_binary only: accept a small dump that has no velocity arrays, setting all velocities to
+    // zero (density is unaffected, velocity outputs are meaningless). See phantom_dump.hpp.
+    bool allow_missing_velocity = false;
 
     // Resolved kernel settings (throw for an unknown kernel name).
     const KernelSpec& kernel_spec() const;

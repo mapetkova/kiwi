@@ -186,7 +186,7 @@ def main():
             json.dump(c, f)
         return c, p
 
-    def compare(tag, dump_kwargs, kiwi_units, ascii_conv):
+    def compare(tag, dump_kwargs, kiwi_units, ascii_conv, kiwi_extra=None):
         """Dump vs equivalent ascii. ascii_conv converts code-unit values to the units KIWI works in."""
         dump = os.path.join(work, tag + ".dump")
         keep, m_code, hfact = write_case(dump, rows, **dump_kwargs)
@@ -195,7 +195,9 @@ def main():
             for x, y, z, vx, vy, vz, h in keep:
                 X, Y, Z, VX, VY, VZ, M, H = ascii_conv(x, y, z, vx, vy, vz, m_code, h)
                 f.write(f"{X!r} {Y!r} {Z!r} {VX!r} {VY!r} {VZ!r} {M!r} {H!r} 1.0\n")
-        extra = {"phantom_units": kiwi_units} if kiwi_units else None
+        extra = dict(kiwi_extra or {})
+        if kiwi_units:
+            extra["phantom_units"] = kiwi_units
         c1, p1 = cfg(tag + "_dump", dump, "auto", extra)
         c2, p2 = cfg(tag + "_txt", asc, "dale_phantom")
         run(kiwi, "sph-to-grid", p1)
@@ -221,6 +223,10 @@ def main():
     ok &= compare("dust_type_dropped", {"dust_every": 4}, {"length_cm": 1.0, "mass_g": 1.0, "velocity_cms": 1.0}, ident)
     ok &= compare("mpi_blocks", {"mpi": 3}, {"length_cm": 1.0, "mass_g": 1.0, "velocity_cms": 1.0}, ident)
     ok &= compare("itype_all_gas", {"with_itype": True}, {"length_cm": 1.0, "mass_g": 1.0, "velocity_cms": 1.0}, ident)
+    # a small dump (real*4 everywhere, no velocity arrays) is usable for density when explicitly allowed
+    zero_v = lambda x, y, z, vx, vy, vz, m, h: (x, y, z, 0.0, 0.0, 0.0, m, h)
+    ok &= compare("small_dump_zero_velocity", {"rb": 4, "drop": ("vx", "vy", "vz"), "ident": "ST:Phantom:test (hydro)"},
+                  {"length_cm": 1.0, "mass_g": 1.0, "velocity_cms": 1.0}, zero_v, {"allow_missing_velocity": True})
     # unit conversion with KIWI's default (SPLASH) constants: code units -> pc, M_Sun, km/s
     ud, um, ut = 3.086e18, 1.9891e38, 1.488114062362035e12
     def conv(x, y, z, vx, vy, vz, m, h):
@@ -231,7 +237,8 @@ def main():
     print("malformed dumps are rejected clearly")
     bad = {
         "untagged": ({"ident": "FU:Phantom:old"}, "tagged"),
-        "small_dump_without_velocities": ({"drop": ("vx", "vy", "vz")}, "not found"),
+        "small_dump_without_velocities": ({"drop": ("vx", "vy", "vz")}, "allow_missing_velocity"),
+        "missing_position_array": ({"drop": ("z",)}, "'z' not found"),
     }
     for tag, (kw, msg) in bad.items():
         dump = os.path.join(work, tag + ".dump")

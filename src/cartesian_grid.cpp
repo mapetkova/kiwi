@@ -141,7 +141,8 @@ CartesianGridResult run_sph_to_grid_stage(const Config& cfg) {
 
     const KernelIntegrator kernel = make_kernel_integrator(cfg, cfg.cartesian_grid.use_tabulated_integral, &table);
 
-    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact(), cfg.phantom_units);
+    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact(), cfg.phantom_units,
+                                          cfg.allow_missing_velocity);
     std::cerr << "[kiwi] sph-to-grid: loaded " << snap.size() << " SPH particles (no point-set/"
                  "tessellation/mapping stage involved -- this path reads the snapshot directly)\n";
 

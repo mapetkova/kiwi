@@ -8,6 +8,10 @@ spline kernel; the non-cubic kernels are run on the same data purely as a stress
 If the Phantom binary dump the ascii was exported from sits next to it (same name without ".ascii"),
 the cubic-spline run is repeated from the binary and must give the same grid as the ascii run.
 
+If a Phantom small dump of the preceding step sits next to it (brick_03926: positions and h only, no
+velocities), it is run with allow_missing_velocity and must give all-zero velocities and a density grid
+close to the full dump's (the two steps are ~130 yr apart).
+
 Checks, all on the full snapshot with sph-to-grid:
   * cubic spline (default fast path): total mass and total momentum on the grid equal the particle sums
     (the domain is padded so that no kernel is cut off), density >= 0, nothing NaN;
@@ -112,12 +116,13 @@ def main():
         dom[ax + "_min"], dom[ax + "_max"], res["resolution_" + ax] = a, b, n
     print(f"domain padded by {pad:.3g}: {res}")
 
-    def run(tag, kernel=None, tabulated=False, snapshot=None):
+    def run(tag, kernel=None, tabulated=False, snapshot=None, extra=None):
         cfg = {"run_name": tag, "domain": dom, "input_snapshot": snapshot or snap_path,
                "work_folder": os.path.join(work, tag),
                "cartesian_grid": dict(res, use_tabulated_integral=tabulated)}
         if kernel:
             cfg["kernel"] = kernel
+        cfg.update(extra or {})
         shutil.rmtree(cfg["work_folder"], ignore_errors=True)
         path = os.path.join(work, tag + ".json")
         with open(path, "w") as f:
@@ -159,6 +164,20 @@ def main():
         dv = max(max(abs(a[k][i] - b[k][i]) for i in sig) for k in (1, 2, 3))
         ok &= check("binary == ascii: density", dr < 1e-9, f"max diff/max = {dr:.1e}")
         ok &= check("binary == ascii: velocity (cells with rho > 1e-6 max)", dv < 1e-6, f"max |dv| = {dv:.1e} km/s")
+
+    small = binary[:-1] + "6" if binary else None
+    if small and os.path.exists(small) and os.path.exists(binary):
+        print("Phantom small dump of the previous step (no velocities), density only")
+        sgrid = run("cubic_small", snapshot=small, extra={"allow_missing_velocity": True})
+        a, s_ = cubic[2], sgrid[2]
+        vol = ((cubic[1][1] - cubic[1][0]) / cubic[0][0]) * ((cubic[1][3] - cubic[1][2]) / cubic[0][1]) * \
+              ((cubic[1][5] - cubic[1][4]) / cubic[0][2])
+        ok &= check("small dump: velocities are all zero", all(v == 0.0 for k in (1, 2, 3) for v in s_[k]))
+        mass_ratio = sum(s_[0]) / sum(a[0])
+        ok &= check("small dump: total mass close to the full dump's", abs(mass_ratio - 1.0) < 2e-3,
+                    f"ratio {mass_ratio:.6f}")
+        l1 = sum(abs(p - q) for p, q in zip(a[0], s_[0])) / sum(a[0])
+        ok &= check("small dump: density grid close to the full dump's", l1 < 0.10, f"L1 difference {l1:.2%}")
 
     print("cubic spline through the generic integral")
     gen = run("cubic_generic", {"generic_path": True})

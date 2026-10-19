@@ -153,7 +153,7 @@ bool is_phantom_dump(const std::string& path) {
     }
 }
 
-SPHSnapshot load_phantom_dump(const std::string& path, const PhantomUnits& units) {
+SPHSnapshot load_phantom_dump(const std::string& path, const PhantomUnits& units, bool allow_missing_velocity) {
     RecordReader r(path);
     if (!r.ok()) throw std::runtime_error("could not open SPH snapshot file: " + path);
 
@@ -237,6 +237,7 @@ SPHSnapshot load_phantom_dump(const std::string& path, const PhantomUnits& units
 
     SPHSnapshot snap;
     long long n_seen = 0, n_dead = 0, n_other_type = 0;
+    bool velocities_zeroed = false;
     const int nsub = nblocks / hdr_blocks;   // blocks per MPI task: [particles, sinks] normally
     for (int bi = 0; bi < nblocks; ++bi) {
         const BlockHeader& bh = blocks[static_cast<size_t>(bi)];
@@ -263,10 +264,23 @@ SPHSnapshot load_phantom_dump(const std::string& path, const PhantomUnits& units
         }
         if (is_sink_block) continue;
         if (bh.n == 0) continue;
-        for (const char* name : {"x", "y", "z", "vx", "vy", "vz", "h"})
+        for (const char* name : {"x", "y", "z", "h"})
             if (!arr.count(name))
-                r.fail(std::string("array '") + name + "' not found in a particle block (small dumps do not "
-                       "carry every array KIWI needs)", "the array section");
+                r.fail(std::string("array '") + name + "' not found in a particle block", "the array section");
+        // Phantom's small dumps ("ST:...") carry positions and h but no velocities. Density does not need
+        // them, so with allow_missing_velocity they are set to zero (and the velocity outputs are then
+        // meaningless -- said loudly below); otherwise the dump is refused.
+        std::string missing_vel;
+        for (const char* name : {"vx", "vy", "vz"})
+            if (!arr.count(name)) missing_vel += std::string(missing_vel.empty() ? "" : ", ") + name;
+        if (!missing_vel.empty()) {
+            if (!allow_missing_velocity)
+                r.fail("velocity array(s) " + missing_vel + " not found in a particle block (a Phantom small dump "
+                       "has none). Set \"allow_missing_velocity\": true in the config to use the dump for density "
+                       "only, with all velocities set to zero", "the array section");
+            velocities_zeroed = true;
+            for (const char* name : {"vx", "vy", "vz"}) arr[name].assign(static_cast<size_t>(bh.n), 0.0);
+        }
         const bool have_itype = arr.count("itype") != 0;
         if (!have_itype && several_types)
             r.fail("the header lists particles of more than one type but the dump has no itype array",
@@ -295,6 +309,10 @@ SPHSnapshot load_phantom_dump(const std::string& path, const PhantomUnits& units
               << " particle(s) (dropped " << n_dead << " dead with h <= 0 and " << n_other_type
               << " of another type; sink particles are ignored); gas mass " << m_gas_code * mf
               << " each, density from the header's hfact = " << hfact << ": " << path << "\n";
+    if (velocities_zeroed)
+        std::cerr << "[kiwi] WARNING: this dump has no velocity arrays (a Phantom small dump?); all velocities are "
+                     "set to zero because allow_missing_velocity is true. Density is unaffected, but every velocity "
+                     "output (vx/vy/vz grids, POLARIS velocities, ...) is meaningless.\n";
     return snap;
 }
 

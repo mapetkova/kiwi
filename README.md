@@ -127,7 +127,9 @@ are supported:
   a dump and its `splash to ascii` export give the same grids, and they can be changed with a
   `phantom_units` block (`length_cm`, `mass_g`, `velocity_cms`). Tagged full dumps only ("FT:..."),
   any byte order, 4- or 8-byte default integers and reals, MPI dumps. Dumps with several particle types
-  need an `itype` array; APR dumps are not supported.
+  need an `itype` array; APR dumps are not supported. A Phantom *small* dump (`ST:...`) has no velocity
+  arrays and is refused, unless you set `"allow_missing_velocity": true`: all velocities are then zero (with
+  a warning), the density grids are correct and every velocity output is meaningless.
 
 Two ASCII formats are also supported:
 

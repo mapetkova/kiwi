@@ -39,6 +39,9 @@ bool is_phantom_dump(const std::string& path);
 // (default: pc, M_Sun, km/s) using the dump's own udist/umass/utime. Throws std::runtime_error with a
 // descriptive message for anything it does not understand (not a Phantom dump, untagged or small dump
 // missing required arrays, APR levels, types it cannot tell apart, ...).
-SPHSnapshot load_phantom_dump(const std::string& path, const PhantomUnits& units);
+//
+// A small dump ("ST:...") has no velocity arrays: it is refused unless `allow_missing_velocity`, in which
+// case every velocity is set to zero (with a warning) so the dump can still be used for density.
+SPHSnapshot load_phantom_dump(const std::string& path, const PhantomUnits& units, bool allow_missing_velocity = false);
 
 } // namespace kiwi
