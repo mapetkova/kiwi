@@ -5,6 +5,9 @@ The snapshot lives in tests/data/ (not tracked by git: it is hundreds of MB). It
 spline kernel; the non-cubic kernels are run on the same data purely as a stress test -- the physics is
 "wrong" for them but mass and momentum conservation do not depend on that, so they still must hold.
 
+If the Phantom binary dump the ascii was exported from sits next to it (same name without ".ascii"),
+the cubic-spline run is repeated from the binary and must give the same grid as the ascii run.
+
 Checks, all on the full snapshot with sph-to-grid:
   * cubic spline (default fast path): total mass and total momentum on the grid equal the particle sums
     (the domain is padded so that no kernel is cut off), density >= 0, nothing NaN;
@@ -109,8 +112,9 @@ def main():
         dom[ax + "_min"], dom[ax + "_max"], res["resolution_" + ax] = a, b, n
     print(f"domain padded by {pad:.3g}: {res}")
 
-    def run(tag, kernel=None, tabulated=False):
-        cfg = {"run_name": tag, "domain": dom, "input_snapshot": snap_path, "work_folder": os.path.join(work, tag),
+    def run(tag, kernel=None, tabulated=False, snapshot=None):
+        cfg = {"run_name": tag, "domain": dom, "input_snapshot": snapshot or snap_path,
+               "work_folder": os.path.join(work, tag),
                "cartesian_grid": dict(res, use_tabulated_integral=tabulated)}
         if kernel:
             cfg["kernel"] = kernel
@@ -144,6 +148,17 @@ def main():
     print("cubic spline, default (analytic) path")
     cubic = run("cubic")
     ok &= conservation("cubic", cubic, 1e-9, 1e-9)
+
+    binary = snap_path[:-len(".ascii")] if snap_path.endswith(".ascii") else None
+    if binary and os.path.exists(binary):
+        print("cubic spline from the Phantom binary dump the ascii was exported from")
+        bgrid = run("cubic_binary", snapshot=binary)
+        a, b = cubic[2], bgrid[2]
+        sig = [i for i, r in enumerate(a[0]) if r > 1e-6 * max(a[0])]
+        dr = max(abs(a[0][i] - b[0][i]) for i in sig) / max(a[0])
+        dv = max(max(abs(a[k][i] - b[k][i]) for i in sig) for k in (1, 2, 3))
+        ok &= check("binary == ascii: density", dr < 1e-9, f"max diff/max = {dr:.1e}")
+        ok &= check("binary == ascii: velocity (cells with rho > 1e-6 max)", dv < 1e-6, f"max |dv| = {dv:.1e} km/s")
 
     print("cubic spline through the generic integral")
     gen = run("cubic_generic", {"generic_path": True})

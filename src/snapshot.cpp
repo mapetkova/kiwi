@@ -1,4 +1,5 @@
 #include "kiwi/snapshot.hpp"
+#include "kiwi/phantom_dump.hpp"
 
 #include <cmath>
 #include <fstream>
@@ -465,6 +466,7 @@ SPHSnapshot load_splash_ascii(const std::string& path, double hfact) {
 } // namespace
 
 std::string detect_snapshot_format(const std::string& path) {
+    if (is_phantom_dump(path)) return "phantom_binary";
     std::ifstream f(path);
     if (!f) throw std::runtime_error("could not open SPH snapshot file: " + path);
     std::string first_line;
@@ -479,15 +481,17 @@ std::string detect_snapshot_format(const std::string& path) {
     return "dale_phantom";
 }
 
-SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format, double hfact) {
+SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format, double hfact,
+                              const PhantomUnits& units) {
     std::string resolved = format;
     if (resolved == "auto") resolved = detect_snapshot_format(path);
 
     if (resolved == "dale_phantom") return load_dale_phantom(path);
     if (resolved == "splash_ascii") return load_splash_ascii(path, hfact);
+    if (resolved == "phantom_binary") return load_phantom_dump(path, units);
     throw std::runtime_error(
-        "unknown SPH snapshot format '" + format + "' (expected auto, dale_phantom, or "
-        "splash_ascii)");
+        "unknown SPH snapshot format '" + format + "' (expected auto, dale_phantom, "
+        "splash_ascii, or phantom_binary)");
 }
 
 PointSet extract_points(const SPHSnapshot& snap) {

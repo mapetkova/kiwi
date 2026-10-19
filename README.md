@@ -114,7 +114,22 @@ Useful options:
 
 ## Input snapshots
 
-`input_snapshot_format` is `"auto"` by default. Two ASCII formats are supported:
+`input_snapshot_format` is `"auto"` by default (the format is recognised from the file). Three formats
+are supported:
+
+- `phantom_binary`: a Phantom dump file read directly, with no need to convert it with
+  `splash to ascii` first (the text export is about four times larger and slower to read). Gas
+  particles are used; sink particles, dead particles (`h < 0`) and other particle types are dropped.
+  Phantom stores neither mass nor density: KIWI takes the mass from `massoftype` and the density from
+  `massoftype * (hfact/h)^3`, using the dump's own `hfact` (so `kernel.hfact` is not used). The dump's
+  code units are converted to pc, M_Sun and km/s with the dump's `udist`/`umass`/`utime`; the
+  constants (1 pc = 3.086e18 cm, 1 M_Sun = 1.989e33 g, 1 km/s = 1e5 cm/s) match SPLASH's ascii export, so
+  a dump and its `splash to ascii` export give the same grids, and they can be changed with a
+  `phantom_units` block (`length_cm`, `mass_g`, `velocity_cms`). Tagged full dumps only ("FT:..."),
+  any byte order, 4- or 8-byte default integers and reals, MPI dumps. Dumps with several particle types
+  need an `itype` array; APR dumps are not supported.
+
+Two ASCII formats are also supported:
 
 - `splash_ascii`: the output of `splash to ascii`. Columns are read by name from the header, so
   the exact column set and order can vary. Required: `x y z m vx vy vz` and one of `h` or density.
@@ -194,8 +209,9 @@ The test data is generated on the fly, so nothing needs downloading.
 
 - The POLARIS quantity list is fixed and not configurable.
 - `sph-to-grid` has no native POLARIS or ASCII writer yet.
-- The Voronoi pipeline (`map`, `cartesian-map`) is only tested on synthetic data; the real-snapshot
-  test covers `sph-to-grid`.
+- The automated Voronoi-pipeline tests use synthetic data; the real-snapshot test covers `sph-to-grid`.
+  A one-off run of `map` on a real 520k-particle snapshot (single-threaded, about 6.5 minutes) conserved
+  mass and momentum to about 1e-10, but that run is too slow to be part of `ctest`.
 
 ## Citation
 

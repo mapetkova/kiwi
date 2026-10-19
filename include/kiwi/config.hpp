@@ -251,13 +251,29 @@ struct KernelConfig {
     }
 };
 
+// Units a "phantom_binary" snapshot is converted to when read (see phantom_dump.hpp): the dump stores
+// code units plus the cgs factors udist (length), umass (mass) and utime (time). The defaults are the
+// conventions of SPLASH's `to ascii` export (1 pc = 3.086e18 cm, 1 M_Sun = 1.989e33 g, 1 km/s = 1e5 cm/s),
+// so a dump read directly agrees with its own SPLASH ascii export. Ignored for ascii snapshots.
+struct PhantomUnits {
+    double length_cm = 3.086e18;
+    double mass_g = 1.989e33;
+    double velocity_cms = 1.0e5;
+
+    bool is_default() const {
+        return length_cm == 3.086e18 && mass_g == 1.989e33 && velocity_cms == 1.0e5;
+    }
+};
+
 struct Config {
     std::string run_name;
     Domain domain;
     GridBlocks grid_blocks;
     std::string input_snapshot; // raw SPH snapshot file -- see input_snapshot_format
-    // "auto" (default): detect between the two formats below by sniffing the
-    // file (see detect_snapshot_format() in snapshot.hpp). "dale_phantom":
+    // "auto" (default): detect between the formats below by sniffing the
+    // file (see detect_snapshot_format() in snapshot.hpp). "phantom_binary":
+    // Phantom's native binary dump, read directly (see phantom_dump.hpp;
+    // converted to the units in phantom_units). "dale_phantom":
     // The original 9-column, no-header Phantom ASCII dump (x y z vx vy vz
     // m h rho). "splash_ascii": output of `splash to ascii` (SPLASH repo) --
     // commented header, then per-particle data whose column count/order is
@@ -275,6 +291,7 @@ struct Config {
     CartesianMapConfig cartesian_map;
     CartesianGridConfig cartesian_grid;
     KernelConfig kernel;
+    PhantomUnits phantom_units;
 
     // Resolved kernel settings (throw for an unknown kernel name).
     const KernelSpec& kernel_spec() const;

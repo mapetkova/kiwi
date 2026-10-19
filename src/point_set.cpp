@@ -307,7 +307,7 @@ PointSet run_point_set_stage(const Config& cfg) {
         return load_point_set(final_path);
     }
 
-    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact());
+    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact(), cfg.phantom_units);
     PointSet points = extract_points(snap);
     save_point_set(points, cfg.stage_path("points-raw.dat"));
 

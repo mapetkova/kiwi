@@ -82,9 +82,9 @@ Config Config::load_from_file(const std::string& path) {
         c.input_snapshot = j.at("input_snapshot").get<std::string>();
         c.input_snapshot_format = j.value("input_snapshot_format", std::string("auto"));
         if (c.input_snapshot_format != "auto" && c.input_snapshot_format != "dale_phantom" &&
-            c.input_snapshot_format != "splash_ascii")
-            throw ConfigError("input_snapshot_format must be 'auto', 'dale_phantom', or "
-                               "'splash_ascii' (got '" + c.input_snapshot_format + "')");
+            c.input_snapshot_format != "splash_ascii" && c.input_snapshot_format != "phantom_binary")
+            throw ConfigError("input_snapshot_format must be 'auto', 'dale_phantom', 'splash_ascii', or "
+                               "'phantom_binary' (got '" + c.input_snapshot_format + "')");
         c.work_folder = j.at("work_folder").get<std::string>();
 
         if (j.contains("buffer")) {
@@ -177,6 +177,15 @@ Config Config::load_from_file(const std::string& path) {
                               "default support radius (and kernel.generic_path unset); the selected kernel "
                               "settings need the analytic integral -- set use_tabulated_integral to false");
 
+        if (j.contains("phantom_units")) {
+            const auto& u = j["phantom_units"];
+            c.phantom_units.length_cm = u.value("length_cm", c.phantom_units.length_cm);
+            c.phantom_units.mass_g = u.value("mass_g", c.phantom_units.mass_g);
+            c.phantom_units.velocity_cms = u.value("velocity_cms", c.phantom_units.velocity_cms);
+            if (c.phantom_units.length_cm <= 0.0 || c.phantom_units.mass_g <= 0.0 || c.phantom_units.velocity_cms <= 0.0)
+                throw ConfigError("phantom_units.length_cm / mass_g / velocity_cms must all be > 0");
+        }
+
         if (j.contains("polaris_writer")) {
             const auto& pw = j["polaris_writer"];
             c.polaris_writer.sim_id = pw.value("sim_id", (unsigned short)50);
@@ -243,6 +252,11 @@ json Config::to_json() const {
                        {"support_radius_in_h", kernel.support_radius_in_h},
                        {"hfact", kernel.hfact},
                        {"generic_path", kernel.generic_path}};
+    }
+    if (!phantom_units.is_default()) {
+        j["phantom_units"] = {{"length_cm", phantom_units.length_cm},
+                              {"mass_g", phantom_units.mass_g},
+                              {"velocity_cms", phantom_units.velocity_cms}};
     }
     return j;
 }

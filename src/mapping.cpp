@@ -348,7 +348,7 @@ MappingResult run_mapping_stage(const Config& cfg) {
     const KernelIntegrator kernel = make_kernel_integrator(cfg, cfg.mapping.use_tabulated_integral, &table);
 
     PointSet points = run_point_set_stage(cfg);
-    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact());
+    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact(), cfg.phantom_units);
     std::cerr << "[kiwi] loaded " << points.size() << " grid points, " << snap.size() << " SPH particles\n";
 
     // One voronoicell_neighbor is computed at a time and immediately reduced
@@ -574,7 +574,7 @@ InverseMappingTestResult run_inverse_mapping_test_stage(const Config& cfg) {
     const KernelIntegrator kernel = make_kernel_integrator(cfg, cfg.mapping.use_tabulated_integral, &table);
 
     PointSet points = run_point_set_stage(cfg);
-    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact());
+    SPHSnapshot snap = load_sph_snapshot(cfg.input_snapshot, cfg.input_snapshot_format, cfg.kernel_hfact(), cfg.phantom_units);
     std::cerr << "[kiwi] inverse-mapping-test: loaded " << points.size() << " grid points, "
               << snap.size() << " SPH particles\n";
 

@@ -2,7 +2,8 @@
 // everything downstream (buffer, Lloyd, tessellation, and eventually the
 // density/velocity mapping stage) starts from what's read here.
 //
-// Two file formats are recognized:
+// Three file formats are recognized (the third, "phantom_binary", is Phantom's native binary dump, read
+// directly -- see phantom_dump.hpp):
 //
 //   "dale_phantom": the original Dale-et-al.-2019-style Phantom ASCII
 //   dump, no header line, 9 whitespace-separated columns per particle --
@@ -66,6 +67,7 @@
 #include <string>
 #include <vector>
 
+#include "kiwi/config.hpp"
 #include "kiwi/point_set.hpp"
 
 namespace kiwi {
@@ -79,22 +81,26 @@ struct SPHSnapshot {
     size_t size() const { return id.size(); }
 };
 
-// Sniffs `path`'s first line to tell dale_phantom and splash_ascii apart.
-// Returns "dale_phantom" or "splash_ascii" -- never "auto". Exposed
+// Sniffs `path` to tell the formats apart: a Phantom binary dump is recognised by its capture-pattern
+// record, otherwise the first line decides between dale_phantom and splash_ascii.
+// Returns "phantom_binary", "dale_phantom" or "splash_ascii" -- never "auto". Exposed
 // separately from load_sph_snapshot() so callers (and suggest_config.py's
 // Python port of this same rule) can report or act on the detected format
 // before/without loading the whole file.
 std::string detect_snapshot_format(const std::string& path);
 
 // `format` is one of "auto" (default -- resolved via detect_snapshot_format),
-// "dale_phantom", or "splash_ascii". Throws std::runtime_error for any other
+// "dale_phantom", "splash_ascii", or "phantom_binary". Throws std::runtime_error for any other
 // value, an unreadable file, or a file that doesn't parse as the resolved
 // format.
 //
 // `hfact` is the factor in h = hfact * (m/rho)^(1/3), used only for a splash_ascii snapshot that has a
 // density or an h column but not both (default 1.2, the Phantom cubic-spline value; Config::kernel_hfact()
 // gives the per-kernel value).
-SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format = "auto", double hfact = 1.2);
+//
+// `units` is only used for "phantom_binary" snapshots (see phantom_dump.hpp).
+SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format = "auto", double hfact = 1.2,
+                              const PhantomUnits& units = PhantomUnits());
 
 // Just the positions, as a PointSet ready for the buffer/Lloyd/tessellation
 // stages (which don't need to know anything about velocity/mass/density).
