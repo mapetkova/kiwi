@@ -5,3 +5,6 @@ __pycache__/
 
 # Private development notes (full former README)
 DEVELOPMENT_NOTES.md
+
+# Large real simulation snapshots for tests/real_data_test.py (hundreds of MB; keep out of git)
+tests/data/

@@ -5,6 +5,8 @@
 #                         velocity recovery for sph-to-grid and the full Voronoi pipeline.
 #                         Needs python3 (standard library only).
 #   generic_kernel        generic-kernel analytic integral vs full_integral_new() (cubic) and brute-force quadrature.
+#   real_data             sph-to-grid on a real Phantom snapshot (tests/data/brick_03927.ascii, not in git, ~1 min):
+#                         mass/momentum conservation for several kernels, generic == fast path. Skipped if absent.
 #   kernel_spec_data_current  src/kernel_spec_data.cpp is what tools/kernel_tables/gen_cpp.py generates.
 #   kernel_tables         derived kernel-integral coefficient tables vs brute-force quadrature
 #                         (tools/kernel_tables). Needs python3 (standard library only).
@@ -19,6 +21,12 @@ if(Python3_FOUND)
                    $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/synthetic_work)
   add_test(NAME kernel_tables
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/verify.py 4)
+  # Real simulation snapshot (tests/data, not tracked by git); skipped (exit 77) when it is not there.
+  add_test(NAME real_data
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/real_data_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_SOURCE_DIR}/data/brick_03927.ascii
+                   ${CMAKE_CURRENT_BINARY_DIR}/real_data_work)
+  set_tests_properties(real_data PROPERTIES SKIP_RETURN_CODE 77 LABELS "slow" TIMEOUT 1800)
   add_test(NAME kernel_spec_data_current
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/gen_cpp.py --check)
 else()

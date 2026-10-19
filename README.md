@@ -177,6 +177,11 @@ ctest --output-on-failure
 - `synthetic_pipeline`: builds a small synthetic SPH cloud with a known total mass and bulk velocity,
   runs `sph-to-grid` and the full Voronoi pipeline, and checks that mass is conserved and the
   velocity is recovered, for every kernel. It needs Python 3 and nothing else.
+- `real_data` (about a minute): `sph-to-grid` on a real Phantom snapshot, `tests/data/brick_03927.ascii`
+  (a `splash to ascii` dump of a cubic-spline run; ~350 MB, so it is not tracked by git and the test is
+  skipped when the file is absent). Checks that mass and momentum on the grid equal the particle sums
+  for the cubic, quintic and Wendland C6 kernels, that the generic integral reproduces the cubic fast
+  path, and that the tabulated integral stays close. Run it alone with `ctest -R real_data`.
 - `generic_kernel`: the generic kernel integral against the hand-written cubic-spline one and against
   brute-force quadrature, plus whole-cell mass checks, for all six kernels.
 - `kernel_tables`, `kernel_spec_data_current`: the kernel-integral coefficients (derived exactly in
@@ -189,7 +194,8 @@ The test data is generated on the fly, so nothing needs downloading.
 
 - The POLARIS quantity list is fixed and not configurable.
 - `sph-to-grid` has no native POLARIS or ASCII writer yet.
-- The automated tests are synthetic. A test on a real SPH cutout is planned.
+- The Voronoi pipeline (`map`, `cartesian-map`) is only tested on synthetic data; the real-snapshot
+  test covers `sph-to-grid`.
 
 ## Citation
 
