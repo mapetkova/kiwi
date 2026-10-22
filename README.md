@@ -1,5 +1,5 @@
 # KIWI
-
+[![CI](https://github.com/mapetkova/kiwi/actions/workflows/ci.yml/badge.svg)](https://github.com/mapetkova/kiwi/actions/workflows/ci.yml)
 **KIWI** stands for **Kernel-Integral Weighted Interpolation**.
 
 KIWI maps SPH (smoothed-particle hydrodynamics) simulation snapshots onto grids. Instead of
