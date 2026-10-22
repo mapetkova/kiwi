@@ -201,6 +201,9 @@ ctest --output-on-failure
   skipped when the file is absent). Checks that mass and momentum on the grid equal the particle sums
   for the cubic, quintic and Wendland C6 kernels, that the generic integral reproduces the cubic fast
   path, and that the tabulated integral stays close. Run it alone with `ctest -R real_data`.
+- `real_data_cutout` (a couple of seconds): the same checks (except the binary/small-dump comparisons) on
+  `tests/data/brick_03927_cutout.ascii`, a 2 x 2 pc column (x in [-36, -34], y in [-60, -58], all z; about
+  8500 rows, 2.9 MB) cut out of that snapshot. It is tracked in git, so it runs everywhere, including CI.
 - `generic_kernel`: the generic kernel integral against the hand-written cubic-spline one and against
   brute-force quadrature, plus whole-cell mass checks, for all six kernels.
 - `kernel_tables`, `kernel_spec_data_current`: the kernel-integral coefficients (derived exactly in

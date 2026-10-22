@@ -7,4 +7,6 @@ __pycache__/
 DEVELOPMENT_NOTES.md
 
 # Large real simulation snapshots for tests/real_data_test.py (hundreds of MB; keep out of git)
-tests/data/
+tests/data/*
+# ... except the small cutout that the CI-friendly real-data test uses
+!tests/data/brick_03927_cutout.ascii

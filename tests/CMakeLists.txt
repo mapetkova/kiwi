@@ -7,6 +7,7 @@
 #   generic_kernel        generic-kernel analytic integral vs full_integral_new() (cubic) and brute-force quadrature.
 #   real_data             sph-to-grid on a real Phantom snapshot (tests/data/brick_03927.ascii, not in git, ~1 min):
 #                         mass/momentum conservation for several kernels, generic == fast path. Skipped if absent.
+#   real_data_cutout      the same on tests/data/brick_03927_cutout.ascii (x in [-36,-34], y in [-60,-58] pc, in git).
 #   kernel_spec_data_current  src/kernel_spec_data.cpp is what tools/kernel_tables/gen_cpp.py generates.
 #   phantom_dump          direct reader for Phantom binary dumps: synthetic dumps in many layouts vs the same
 #                         particles as plain ascii; malformed dumps rejected (tests/phantom_dump_test.py).
@@ -36,6 +37,12 @@ if(Python3_FOUND)
                    $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_SOURCE_DIR}/data/brick_03927.ascii
                    ${CMAKE_CURRENT_BINARY_DIR}/real_data_work)
   set_tests_properties(real_data PROPERTIES SKIP_RETURN_CODE 77 LABELS "slow" TIMEOUT 1800)
+  # Same checks on a small spatial cutout of that snapshot (tracked in git, so it runs everywhere).
+  add_test(NAME real_data_cutout
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/real_data_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_SOURCE_DIR}/data/brick_03927_cutout.ascii
+                   ${CMAKE_CURRENT_BINARY_DIR}/real_data_cutout_work)
+  set_tests_properties(real_data_cutout PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 600)
   add_test(NAME kernel_spec_data_current
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/gen_cpp.py --check)
 else()
