@@ -201,7 +201,8 @@ ctest --output-on-failure
   skipped when the file is absent). Checks that mass and momentum on the grid equal the particle sums
   for the cubic, quintic and Wendland C6 kernels, that the generic integral reproduces the cubic fast
   path, and that the tabulated integral stays close. Run it alone with `ctest -R real_data`.
-- `real_data_cutout` (a couple of seconds): the same checks (except the binary/small-dump comparisons) on
+- `real_data_cutout` (a few seconds): the same checks (except the binary/small-dump comparisons), plus the Voronoi
+  `map` stage (mass and momentum summed over the cells of `mapping.dat`), on
   `tests/data/brick_03927_cutout.ascii`, a 2 x 2 pc column (x in [-36, -34], y in [-60, -58], all z; about
   8500 rows, 2.9 MB) cut out of that snapshot. It is tracked in git, so it runs everywhere, including CI.
 - `generic_kernel`: the generic kernel integral against the hand-written cubic-spline one and against
@@ -216,9 +217,12 @@ The test data is generated on the fly, so nothing needs downloading.
 
 - The POLARIS quantity list is fixed and not configurable.
 - `sph-to-grid` has no native POLARIS or ASCII writer yet.
-- The automated Voronoi-pipeline tests use synthetic data; the real-snapshot test covers `sph-to-grid`.
-  A one-off run of `map` on a real 520k-particle snapshot (single-threaded, about 6.5 minutes) conserved
-  mass and momentum to about 1e-10, but that run is too slow to be part of `ctest`.
+- The full-snapshot test covers `sph-to-grid` only; the Voronoi `map` stage is tested on synthetic data and
+  on the small real cutout. A one-off run of `map` on the full 520k-particle snapshot (single-threaded, about
+  6.5 minutes) conserved mass and momentum to about 1e-10, but that run is too slow to be part of `ctest`.
+- `cartesian-map` samples the Voronoi cells at the Cartesian cell centres, so it does not conserve mass
+  when the Cartesian cells are larger than the Voronoi cells (e.g. 64^3 over the 10 x 10 x 16 pc cutout
+  loses about 28% of the mass). Use a finer grid, or the `map` output itself, when mass matters.
 
 ## Citation
 

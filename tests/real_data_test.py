@@ -17,7 +17,9 @@ Checks, all on the full snapshot with sph-to-grid:
     (the domain is padded so that no kernel is cut off), density >= 0, nothing NaN;
   * cubic spline forced through the generic integral (kernel.generic_path) == the default path;
   * tabulated cubic integral: close to the analytic one (mass within a loose tolerance);
-  * quintic spline and Wendland C6 (the widest and the highest-order kernel): mass and momentum conserved.
+  * quintic spline and Wendland C6 (the widest and the highest-order kernel): mass and momentum conserved;
+  * on small snapshots only (<= VORONOI_MAX_PARTICLES, i.e. the cutout): the Voronoi `map` stage, with a
+    coverage_grid buffer and one Lloyd step, conserves mass and momentum cell by cell (mapping.dat).
 
 Usage: real_data_test.py <path-to-kiwi-executable> [snapshot] [work_dir]
 Exit code 0 on success, 1 on failure, 77 (ctest "skipped") if the snapshot is not there.
@@ -35,6 +37,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SNAPSHOT = os.path.join(HERE, "data", "brick_03927.ascii")
 CELL = 1.0  # grid cell size in the snapshot's length unit (pc)
+VORONOI_MAX_PARTICLES = 50000  # the Voronoi `map` stage takes ~6.5 min single-threaded at 520k particles
 
 
 # Column order of the `splash to ascii` header in this snapshot (checked against the header line below).
@@ -196,8 +199,62 @@ def main():
         print(f"{name} on the same data (conservation stress test)")
         ok &= conservation(name, run(name, {"name": name}), 1e-9, 1e-9)
 
+    if s["n"] <= VORONOI_MAX_PARTICLES:
+        ok &= voronoi_map_checks(kiwi, snap_path, work, dom, s)
+    else:
+        print(f"Voronoi `map` stage skipped ({s['n']} particles; it is single-threaded-slow above "
+              f"{VORONOI_MAX_PARTICLES}, run it by hand on big snapshots)")
+
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1
+
+
+def voronoi_map_checks(kiwi, snap_path, work, dom, s):
+    """The Voronoi `map` stage (point-set with a coverage_grid buffer and a Lloyd step -> tessellate ->
+    map) on the same snapshot: the per-cell masses and momenta in mapping.dat must add up to the
+    particle sums, and the cell volumes to the domain volume. mapping.dat is read directly rather than
+    through cartesian-map, whose point sampling is not conservative when the Cartesian cells are bigger
+    than the (here ~0.05 pc) Voronoi cells."""
+    print("Voronoi `map` stage (coverage_grid buffer, 1 Lloyd iteration)")
+    cfg = {"run_name": "voronoi", "domain": dom, "input_snapshot": snap_path,
+           "work_folder": os.path.join(work, "voronoi"),
+           "buffer": {"enabled": True, "strategy": "coverage_grid"},
+           "lloyd": {"iterations": 1, "save_each_iteration": False}}
+    shutil.rmtree(cfg["work_folder"], ignore_errors=True)
+    path = os.path.join(work, "voronoi.json")
+    with open(path, "w") as f:
+        json.dump(cfg, f, indent=1)
+    t = time.time()
+    r = subprocess.run([kiwi, "map", path], capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"FAIL: kiwi map exited with {r.returncode}\n{r.stderr[-2000:]}")
+        return False
+    print(f"  ran map in {time.time() - t:.1f} s")
+    out = os.path.join(cfg["work_folder"], os.listdir(cfg["work_folder"])[0], "mapping.dat")
+    mass, vol, ncell, bad = 0.0, 0.0, 0, 0
+    mom = [0.0, 0.0, 0.0]
+    with open(out) as f:  # id x y z volume density vx vy vz
+        for line in f:
+            t = line.split()
+            v, rho = float(t[4]), float(t[5])
+            ncell += 1
+            vol += v
+            mass += rho * v
+            bad += (not math.isfinite(rho)) or rho < 0.0 or v <= 0.0
+            for d in range(3):
+                mom[d] += rho * v * float(t[6 + d])
+    dom_vol = 1.0
+    for ax in "xyz":
+        dom_vol *= dom[ax + "_max"] - dom[ax + "_min"]
+    ok = check("voronoi: cells >= particles, none with NaN/negative density or volume",
+               ncell >= s["n"] and bad == 0, f"{ncell} cells")
+    ok &= check("voronoi: cell volumes fill the domain", abs(vol - dom_vol) / dom_vol < 1e-4,
+                f"rel.diff={abs(vol - dom_vol) / dom_vol:.1e}")
+    rel = abs(mass - s["mass"]) / s["mass"]
+    ok &= check("voronoi: total mass", rel < 1e-8, f"rel.err={rel:.2e} tol=1e-8")
+    dmom = max(abs(a - c) for a, c in zip(mom, s["momentum"])) / s["mabsv"]
+    ok &= check("voronoi: total momentum", dmom < 1e-8, f"err/sum(m|v|)={dmom:.2e} tol=1e-8")
+    return ok
 
 
 if __name__ == "__main__":
