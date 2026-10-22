@@ -10,11 +10,15 @@
 #   kernel_spec_data_current  src/kernel_spec_data.cpp is what tools/kernel_tables/gen_cpp.py generates.
 #   phantom_dump          direct reader for Phantom binary dumps: synthetic dumps in many layouts vs the same
 #                         particles as plain ascii; malformed dumps rejected (tests/phantom_dump_test.py).
+#   example_configs       every configs/*.json loads through Config::load_from_file (tools/test_configs.cpp).
 #   kernel_tables         derived kernel-integral coefficient tables vs brute-force quadrature
 #                         (tools/kernel_tables). Needs python3 (standard library only).
 
 add_test(NAME lattice_tessellation COMMAND test_lattice_grid)
 add_test(NAME generic_kernel COMMAND test_generic_kernel)
+
+file(GLOB KIWI_EXAMPLE_CONFIGS ${CMAKE_SOURCE_DIR}/configs/*.json)
+add_test(NAME example_configs COMMAND test_configs ${KIWI_EXAMPLE_CONFIGS})
 
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)

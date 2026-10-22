@@ -1,0 +1,64 @@
+name: CI
+on:
+  push: {branches: [main]}
+  pull_request:
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        build_type: [Release]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      - name: Build
+        run: cmake --build build -j 4
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j 4 -LE slow
+
+  # The mapping stage's particle loop is OpenMP-parallel: check that the results do not depend on
+  # the thread count (macOS runners have no OpenMP, so this runs on Linux only).
+  threads:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        omp_threads: [1, 2, 4]
+    env:
+      OMP_NUM_THREADS: ${{ matrix.omp_threads }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build -j 4
+      - name: Test (end-to-end tests that use the kiwi executable)
+        run: ctest --test-dir build --output-on-failure -R 'synthetic_pipeline|phantom_dump|generic_kernel'
+
+  # Debug build with AddressSanitizer + UndefinedBehaviorSanitizer: catches out-of-bounds reads and
+  # undefined behaviour that -O2 builds can hide (binary dump reader, Voro++ cell loops, indexing).
+  sanitizers:
+    runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+      OMP_NUM_THREADS: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
+      - name: Build
+        run: cmake --build build -j 4
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j 2 -LE slow --timeout 1200

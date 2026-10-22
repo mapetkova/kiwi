@@ -92,3 +92,8 @@ target_include_directories(test_generic_kernel PRIVATE ${CMAKE_SOURCE_DIR}/inclu
 add_executable(h_from_neighbours tools/h_from_neighbours.cpp)
 target_link_libraries(h_from_neighbours PRIVATE kiwi_core)
 target_include_directories(h_from_neighbours PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/third_party)
+
+# Every shipped example config in configs/ must load -- see tools/test_configs.cpp.
+add_executable(test_configs tools/test_configs.cpp)
+target_link_libraries(test_configs PRIVATE kiwi_core)
+target_include_directories(test_configs PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/third_party)
