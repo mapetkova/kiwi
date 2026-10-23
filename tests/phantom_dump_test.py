@@ -3,7 +3,7 @@
 
 Writes small Phantom dumps in several layouts (byte order, integer/real widths, extra particle types,
 dead particles, sink blocks, MPI-style repeated blocks, units), writes the same particles as a plain
-`dale_phantom` text file, runs `kiwi sph-to-grid` on both and requires the two grids to agree. Also
+`plain_ascii` text file, runs `kiwi sph-to-grid` on both and requires the two grids to agree. Also
 checks that malformed dumps are rejected with an understandable message.
 
 The writer follows the format description at
@@ -199,7 +199,7 @@ def main():
         if kiwi_units:
             extra["phantom_units"] = kiwi_units
         c1, p1 = cfg(tag + "_dump", dump, "auto", extra)
-        c2, p2 = cfg(tag + "_txt", asc, "dale_phantom")
+        c2, p2 = cfg(tag + "_txt", asc, "plain_ascii")
         run(kiwi, "sph-to-grid", p1)
         run(kiwi, "sph-to-grid", p2)
         a, b = load_grid(c2["work_folder"]), load_grid(c1["work_folder"])

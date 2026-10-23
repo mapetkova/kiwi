@@ -86,7 +86,7 @@
 //
 // Usage:
 //   h_from_neighbours <snapshot_path> [format] [hfact] [tolh] [output.dat]
-//     format  -- "auto" (default, sniffed), "dale_phantom", or "splash_ascii"
+//     format  -- "auto" (default, sniffed), "plain_ascii", or "splash_ascii"
 //     hfact   -- default 1.2 (Phantom's own default, options.f90 hfact_default)
 //     tolh    -- default 1e-4 (Phantom's own default, options.f90:93)
 //     output  -- default "<snapshot-basename>-h-compare.dat" in the cwd

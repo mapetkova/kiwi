@@ -12,7 +12,7 @@
     "block_scale_factor": 3.0
   },
   "input_snapshot": "PATH/TO/snapshots/ascii_CMZ_HDens_ECCENTRIC_TALPHA_00232.out",
-  "input_snapshot_format": "dale_phantom",
+  "input_snapshot_format": "plain_ascii",
   "work_folder": "runs",
   "buffer": {
     "enabled": true,

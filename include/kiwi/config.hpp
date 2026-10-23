@@ -273,9 +273,8 @@ struct Config {
     // "auto" (default): detect between the formats below by sniffing the
     // file (see detect_snapshot_format() in snapshot.hpp). "phantom_binary":
     // Phantom's native binary dump, read directly (see phantom_dump.hpp;
-    // converted to the units in phantom_units). "dale_phantom":
-    // The original 9-column, no-header Phantom ASCII dump (x y z vx vy vz
-    // m h rho). "splash_ascii": output of `splash to ascii` (SPLASH repo) --
+    // converted to the units in phantom_units). "plain_ascii":
+    // headerless text, 9 columns per particle (x y z vx vy vz m h rho). "splash_ascii": output of `splash to ascii` (SPLASH repo) --
     // commented header, then per-particle data whose column count/order is
     // read from the header line itself (not hardcoded -- it varies between
     // files depending on the source Phantom run), non-gas (itype != 1) rows

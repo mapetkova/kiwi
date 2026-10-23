@@ -137,7 +137,10 @@ Two ASCII formats are also supported:
 
 - `splash_ascii`: the output of `splash to ascii`. Columns are read by name from the header, so
   the exact column set and order can vary. Required: `x y z m vx vy vz` and one of `h` or density.
-- `dale_phantom`: headerless, 9 columns per particle: `x y z vx vy vz m h rho`.
+- `plain_ascii`: headerless text, 9 columns per particle: `x y z vx vy vz m h rho`. This is the format of the
+  early KIWI runs (in the style of the Dale et al. 2019 simulation output); it is not tied to any
+  simulation code, so it is the easiest thing to write from your own data. Blank lines are skipped; any other
+  line that is not exactly 9 finite numbers is an error that names the line.
 
 `tools/suggest_config.py` (below) reads either format and proposes a config for a snapshot.
 

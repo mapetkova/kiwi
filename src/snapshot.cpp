@@ -29,7 +29,7 @@ bool is_blank_line(const std::string& line) {
     return true;
 }
 
-SPHSnapshot load_dale_phantom(const std::string& path) {
+SPHSnapshot load_plain_ascii(const std::string& path) {
     std::ifstream f(path);
     if (!f) throw std::runtime_error("could not open SPH snapshot file: " + path);
 
@@ -50,19 +50,19 @@ SPHSnapshot load_dale_phantom(const std::string& path) {
             v[k] = std::strtod(p, &end);
             if (end == p)
                 throw std::runtime_error(
-                    "SPH snapshot file (dale_phantom format), line " + std::to_string(lineno) +
+                    "SPH snapshot file (plain_ascii format), line " + std::to_string(lineno) +
                     ": expected 9 numeric columns (x y z vx vy vz m h rho), could not read column " +
                     std::to_string(k + 1) + ": " + path);
             if (!std::isfinite(v[k]))
                 throw std::runtime_error(
-                    "SPH snapshot file (dale_phantom format), line " + std::to_string(lineno) +
+                    "SPH snapshot file (plain_ascii format), line " + std::to_string(lineno) +
                     ": column " + std::to_string(k + 1) + " is not finite: " + path);
             p = end;
         }
         while (*p == ' ' || *p == '\t' || *p == '\r') ++p;
         if (*p != '\0')
             throw std::runtime_error(
-                "SPH snapshot file (dale_phantom format), line " + std::to_string(lineno) +
+                "SPH snapshot file (plain_ascii format), line " + std::to_string(lineno) +
                 ": more than 9 columns (expected x y z vx vy vz m h rho): " + path);
         ++row;
         snap.id.push_back(row);
@@ -78,7 +78,7 @@ SPHSnapshot load_dale_phantom(const std::string& path) {
     }
     if (snap.size() == 0)
         throw std::runtime_error(
-            "SPH snapshot file (dale_phantom format) contained no rows -- expected 9 columns "
+            "SPH snapshot file (plain_ascii format) contained no rows -- expected 9 columns "
             "(x y z vx vy vz m h rho) per line: " + path);
     return snap;
 }
@@ -501,12 +501,12 @@ std::string detect_snapshot_format(const std::string& path) {
     std::getline(f, first_line);
     // splash-to-ascii files always open with a `#` comment naming SPLASH as
     // the tool that wrote them (see the module header comment for the full
-    // preamble shape); the dale_phantom format has no header at all --
+    // preamble shape); the plain_ascii format has no header at all --
     // its first line is already the first particle's data.
     if (!first_line.empty() && first_line[0] == '#' && first_line.find("SPLASH") != std::string::npos) {
         return "splash_ascii";
     }
-    return "dale_phantom";
+    return "plain_ascii";
 }
 
 SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format, double hfact,
@@ -514,11 +514,11 @@ SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format
     std::string resolved = format;
     if (resolved == "auto") resolved = detect_snapshot_format(path);
 
-    if (resolved == "dale_phantom") return load_dale_phantom(path);
+    if (resolved == "plain_ascii") return load_plain_ascii(path);
     if (resolved == "splash_ascii") return load_splash_ascii(path, hfact);
     if (resolved == "phantom_binary") return load_phantom_dump(path, units, allow_missing_velocity);
     throw std::runtime_error(
-        "unknown SPH snapshot format '" + format + "' (expected auto, dale_phantom, "
+        "unknown SPH snapshot format '" + format + "' (expected auto, plain_ascii, "
         "splash_ascii, or phantom_binary)");
 }
 

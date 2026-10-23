@@ -49,7 +49,7 @@ def main():
     write_snapshot(snap)
     cfg = {"run_name": "polaris",
            "domain": {a + s: v * HALF_DOMAIN for a in "xyz" for s, v in (("_min", -1), ("_max", 1))},
-           "input_snapshot": snap, "input_snapshot_format": "dale_phantom",
+           "input_snapshot": snap, "input_snapshot_format": "plain_ascii",
            "work_folder": os.path.join(work, "runs"),
            "buffer": {"enabled": False}, "lloyd": {"iterations": 0},
            "polaris_writer": SCALES}

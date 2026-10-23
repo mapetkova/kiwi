@@ -43,7 +43,7 @@ VORONOI_KERNELS = ("quintic_spline", "wendland_c6")
 
 
 def write_snapshot(path, h_scale=1.0):
-    """dale_phantom format: `x y z vx vy vz m h rho`, no header. Particles sit in a Gaussian blob
+    """plain_ascii format: `x y z vx vy vz m h rho`, no header. Particles sit in a Gaussian blob
     (sigma 1, truncated at 2.5 sigma) well inside the domain; h is set from a local-density
     estimate that is only roughly right, which is fine -- mass conservation doesn't need an
     accurate h, just a positive one."""
@@ -132,7 +132,7 @@ def main():
             "domain": {"x_min": -HALF_DOMAIN, "x_max": HALF_DOMAIN, "y_min": -HALF_DOMAIN,
                        "y_max": HALF_DOMAIN, "z_min": -HALF_DOMAIN, "z_max": HALF_DOMAIN},
             "input_snapshot": snap,
-            "input_snapshot_format": "dale_phantom",
+            "input_snapshot_format": "plain_ascii",
             "work_folder": os.path.join(work, "runs_" + name),
             "buffer": {"enabled": False},
             "lloyd": {"iterations": 0, "save_each_iteration": False},

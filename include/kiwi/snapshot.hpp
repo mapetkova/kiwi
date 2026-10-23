@@ -5,8 +5,8 @@
 // Three file formats are recognized (the third, "phantom_binary", is Phantom's native binary dump, read
 // directly -- see phantom_dump.hpp):
 //
-//   "dale_phantom": the original Dale-et-al.-2019-style Phantom ASCII
-//   dump, no header line, 9 whitespace-separated columns per particle --
+//   "plain_ascii": a headerless text file (the format of the early KIWI runs, not
+//   tied to any simulation code), 9 whitespace-separated columns per particle --
 //     x  y  z  vx  vy  vz  m  h  rho
 //   (m is constant across particles for an equal-mass SPH run; h is the
 //   smoothing length; rho is density.) Particle id is the 1-based row
@@ -61,7 +61,7 @@
 //
 // "auto" (the default -- see Config::input_snapshot_format) picks between
 // the two by sniffing the file's first line for the SPLASH signature
-// comment; a file with no such first line is assumed to be dale_phantom.
+// comment; a file with no such first line is assumed to be plain_ascii.
 #pragma once
 
 #include <string>
@@ -82,15 +82,15 @@ struct SPHSnapshot {
 };
 
 // Sniffs `path` to tell the formats apart: a Phantom binary dump is recognised by its capture-pattern
-// record, otherwise the first line decides between dale_phantom and splash_ascii.
-// Returns "phantom_binary", "dale_phantom" or "splash_ascii" -- never "auto". Exposed
+// record, otherwise the first line decides between plain_ascii and splash_ascii.
+// Returns "phantom_binary", "plain_ascii" or "splash_ascii" -- never "auto". Exposed
 // separately from load_sph_snapshot() so callers (and suggest_config.py's
 // Python port of this same rule) can report or act on the detected format
 // before/without loading the whole file.
 std::string detect_snapshot_format(const std::string& path);
 
 // `format` is one of "auto" (default -- resolved via detect_snapshot_format),
-// "dale_phantom", "splash_ascii", or "phantom_binary". Throws std::runtime_error for any other
+// "plain_ascii", "splash_ascii", or "phantom_binary". Throws std::runtime_error for any other
 // value, an unreadable file, or a file that doesn't parse as the resolved
 // format.
 //

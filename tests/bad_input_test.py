@@ -21,7 +21,7 @@ BASE = {
     "run_name": "bad",
     "domain": {"x_min": -1, "x_max": 1, "y_min": -1, "y_max": 1, "z_min": -1, "z_max": 1},
     "input_snapshot": "good.out",
-    "input_snapshot_format": "dale_phantom",
+    "input_snapshot_format": "plain_ascii",
     "work_folder": "work",
 }
 
@@ -74,6 +74,7 @@ def main():
         ("random bytes as Phantom dump", "sph-to-grid",
          cfg(input_snapshot="random.bin", input_snapshot_format="phantom_binary"), "capture pattern"),
         ("unknown snapshot format", "sph-to-grid", cfg(input_snapshot_format="fits"), "input_snapshot_format"),
+        ("removed format name dale_phantom", "sph-to-grid", cfg(input_snapshot_format="dale_phantom"), "input_snapshot_format"),
         ("unknown kernel", "sph-to-grid", cfg(kernel={"name": "gaussian"}), "unknown kernel"),
         ("zero resolution", "sph-to-grid", cfg(cartesian_grid={"resolution": 0}), "resolution must be > 0"),
         ("negative resolution", "sph-to-grid", cfg(cartesian_grid={"resolution": -4}), "resolution must be > 0"),

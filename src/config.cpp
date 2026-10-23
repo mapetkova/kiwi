@@ -81,9 +81,9 @@ Config Config::load_from_file(const std::string& path) {
 
         c.input_snapshot = j.at("input_snapshot").get<std::string>();
         c.input_snapshot_format = j.value("input_snapshot_format", std::string("auto"));
-        if (c.input_snapshot_format != "auto" && c.input_snapshot_format != "dale_phantom" &&
+        if (c.input_snapshot_format != "auto" && c.input_snapshot_format != "plain_ascii" &&
             c.input_snapshot_format != "splash_ascii" && c.input_snapshot_format != "phantom_binary")
-            throw ConfigError("input_snapshot_format must be 'auto', 'dale_phantom', 'splash_ascii', or "
+            throw ConfigError("input_snapshot_format must be 'auto', 'plain_ascii', 'splash_ascii', or "
                                "'phantom_binary' (got '" + c.input_snapshot_format + "')");
         c.work_folder = j.at("work_folder").get<std::string>();
 

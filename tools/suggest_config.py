@@ -90,8 +90,8 @@ actually runs (numpy is the same dependency the earlier cube-extraction test
 scripts in this project already used).
 
 Snapshot format: two raw SPH snapshot formats are recognized, matching
-load_sph_snapshot() in snapshot.cpp exactly -- "dale_phantom" (the
-original 9-column, no-header Phantom ASCII dump: x y z vx vy vz m h rho) and
+load_sph_snapshot() in snapshot.cpp exactly -- "plain_ascii" (a
+headerless text file, 9 columns per particle: x y z vx vy vz m h rho) and
 "splash_ascii" (output of `splash to ascii`, from the SPLASH repo:
 github.com/danieljprice/splash -- a commented header/preamble followed by
 15-column rows: x y z m h rho vx vy vz pressure alpha div_v poten dt itype;
@@ -113,13 +113,13 @@ def eprint(*args, **kwargs):
 def detect_snapshot_format(path):
     """Mirrors detect_snapshot_format() in snapshot.cpp exactly: sniffs the
     file's first line for the `splash to ascii` signature comment; anything
-    else is assumed to be the original dale_phantom format (no header at
-    all). Returns "dale_phantom" or "splash_ascii" -- never "auto"."""
+    else is assumed to be the plain_ascii format (no header at
+    all). Returns "plain_ascii" or "splash_ascii" -- never "auto"."""
     with open(path) as f:
         first_line = f.readline()
     if first_line.startswith("#") and "SPLASH" in first_line:
         return "splash_ascii"
-    return "dale_phantom"
+    return "plain_ascii"
 
 
 def _splash_ascii_header_line_count(path):
@@ -307,9 +307,9 @@ def _split_splash_ascii_labels(header_line, n_data_cols, path):
     return labels
 
 
-def _load_dale_phantom(path):
+def _load_plain_ascii(path):
     """Read the 9-column, no-header ASCII format (x y z vx vy vz m h rho) --
-    the exact format load_sph_snapshot()'s dale_phantom branch (snapshot.cpp)
+    the exact format load_sph_snapshot()'s plain_ascii branch (snapshot.cpp)
     reads. Returns a dict of numpy arrays, one per column."""
     import numpy as np
 
@@ -348,7 +348,7 @@ def _load_splash_ascii(path):
     conversion, if the header's own unit brackets say anything other than
     those three units.
 
-    Returns the same dict shape as _load_dale_phantom (x/y/z/vx/vy/vz/m/h/
+    Returns the same dict shape as _load_plain_ascii (x/y/z/vx/vy/vz/m/h/
     rho arrays).
 
     NOTE: this used to hardcode a fixed 15-column, fixed-order layout (x y
@@ -476,16 +476,16 @@ def _load_splash_ascii(path):
 def load_snapshot(path, fmt="auto"):
     """Read a raw SPH snapshot in either recognized format (see the module
     docstring). fmt is "auto" (default -- resolved via
-    detect_snapshot_format), "dale_phantom", or "splash_ascii". Returns a
+    detect_snapshot_format), "plain_ascii", or "splash_ascii". Returns a
     dict of numpy arrays, one per column (x/y/z/vx/vy/vz/m/h/rho), regardless
     of which format it came from."""
     if fmt == "auto":
         fmt = detect_snapshot_format(path)
-    if fmt == "dale_phantom":
-        return _load_dale_phantom(path)
+    if fmt == "plain_ascii":
+        return _load_plain_ascii(path)
     if fmt == "splash_ascii":
         return _load_splash_ascii(path)
-    raise ValueError(f"unknown snapshot format: {fmt!r} (expected auto, dale_phantom, or "
+    raise ValueError(f"unknown snapshot format: {fmt!r} (expected auto, plain_ascii, or "
                       f"splash_ascii)")
 
 
@@ -910,8 +910,8 @@ def run_interactive_zoom_assistance(snap, geometric_center, com_center, densest_
     return center, center_mode, side
 
 
-def _shift_dale_phantom(snapshot_path, center, output_path):
-    """Write a copy of a dale_phantom raw snapshot with (x, y, z) re-centered
+def _shift_plain_ascii(snapshot_path, center, output_path):
+    """Write a copy of a plain_ascii raw snapshot with (x, y, z) re-centered
     on `center`; vx/vy/vz/m/h/rho columns pass through unchanged. Preserves
     the original file's column formatting precision (repr-round-trippable)."""
     with open(snapshot_path) as fin, open(output_path, "w") as fout:
@@ -927,7 +927,7 @@ def _shift_dale_phantom(snapshot_path, center, output_path):
 
 
 def _shift_splash_ascii(snapshot_path, center, output_path):
-    """Same idea as _shift_dale_phantom, but for the splash_ascii format:
+    """Same idea as _shift_plain_ascii, but for the splash_ascii format:
     the header/preamble (time/npart/units/column-header lines) is copied
     through byte-for-byte -- only x/y/z ever move, so units, particle
     counts, and the column layout all stay valid -- and every data row has
@@ -978,14 +978,14 @@ def _shift_splash_ascii(snapshot_path, center, output_path):
 
 def shift_snapshot_file(snapshot_path, center, output_path, fmt):
     """Write a CoM-shifted copy of the raw snapshot (positions only) in
-    whichever format `fmt` is -- "dale_phantom" or "splash_ascii" (never
+    whichever format `fmt` is -- "plain_ascii" or "splash_ascii" (never
     "auto"; resolve it before calling)."""
-    if fmt == "dale_phantom":
-        _shift_dale_phantom(snapshot_path, center, output_path)
+    if fmt == "plain_ascii":
+        _shift_plain_ascii(snapshot_path, center, output_path)
     elif fmt == "splash_ascii":
         _shift_splash_ascii(snapshot_path, center, output_path)
     else:
-        raise ValueError(f"unknown snapshot format: {fmt!r} (expected dale_phantom or "
+        raise ValueError(f"unknown snapshot format: {fmt!r} (expected plain_ascii or "
                           f"splash_ascii)")
 
 
@@ -1001,9 +1001,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    ap.add_argument("snapshot", help="path to the raw SPH snapshot (dale_phantom or "
+    ap.add_argument("snapshot", help="path to the raw SPH snapshot (plain_ascii or "
                                       "splash_ascii format -- see --snapshot-format)")
-    ap.add_argument("--snapshot-format", choices=["auto", "dale_phantom", "splash_ascii"],
+    ap.add_argument("--snapshot-format", choices=["auto", "plain_ascii", "splash_ascii"],
                      default="auto",
                      help="raw SPH snapshot format (default: auto -- detected by sniffing the "
                           "file for the `splash to ascii` signature comment). Override if "
