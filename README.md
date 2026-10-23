@@ -205,6 +205,10 @@ ctest --output-on-failure
   `map` stage (mass and momentum summed over the cells of `mapping.dat`), on
   `tests/data/brick_03927_cutout.ascii`, a 2 x 2 pc column (x in [-36, -34], y in [-60, -58], all z; about
   8500 rows, 2.9 MB) cut out of that snapshot. It is tracked in git, so it runs everywhere, including CI.
+- `polaris_writer`: `write-polaris` on a synthetic cloud, decoded back: header, cell volumes, symmetric
+  neighbour lists, and temperature/velocity/density against `mapping.dat` with the configured scales.
+- `bad_input`: malformed configs and snapshots (missing or empty files, NaN or short rows, unknown kernel or
+  format, inverted domain, bad resolution, invalid JSON, ...) must give a one-line `[kiwi] error` and exit 1.
 - `generic_kernel`: the generic kernel integral against the hand-written cubic-spline one and against
   brute-force quadrature, plus whole-cell mass checks, for all six kernels.
 - `kernel_tables`, `kernel_spec_data_current`: the kernel-integral coefficients (derived exactly in

@@ -2,6 +2,7 @@
 #include "kiwi/phantom_dump.hpp"
 
 #include <cmath>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -33,20 +34,47 @@ SPHSnapshot load_dale_phantom(const std::string& path) {
     if (!f) throw std::runtime_error("could not open SPH snapshot file: " + path);
 
     SPHSnapshot snap;
-    double x, y, z, vx, vy, vz, m, h, rho;
+    // One particle per line, exactly 9 finite numbers. Parsed line by line (not as one token stream)
+    // so that a malformed line is an error with its line number, rather than silently ending the
+    // read there (dropping every later particle) or shifting the columns of the following rows.
+    std::string line;
+    long lineno = 0;
     int row = 0;
-    while (f >> x >> y >> z >> vx >> vy >> vz >> m >> h >> rho) {
+    while (std::getline(f, line)) {
+        ++lineno;
+        if (is_blank_line(line)) continue;
+        double v[9];
+        const char* p = line.c_str();
+        for (int k = 0; k < 9; ++k) {
+            char* end = nullptr;
+            v[k] = std::strtod(p, &end);
+            if (end == p)
+                throw std::runtime_error(
+                    "SPH snapshot file (dale_phantom format), line " + std::to_string(lineno) +
+                    ": expected 9 numeric columns (x y z vx vy vz m h rho), could not read column " +
+                    std::to_string(k + 1) + ": " + path);
+            if (!std::isfinite(v[k]))
+                throw std::runtime_error(
+                    "SPH snapshot file (dale_phantom format), line " + std::to_string(lineno) +
+                    ": column " + std::to_string(k + 1) + " is not finite: " + path);
+            p = end;
+        }
+        while (*p == ' ' || *p == '\t' || *p == '\r') ++p;
+        if (*p != '\0')
+            throw std::runtime_error(
+                "SPH snapshot file (dale_phantom format), line " + std::to_string(lineno) +
+                ": more than 9 columns (expected x y z vx vy vz m h rho): " + path);
         ++row;
         snap.id.push_back(row);
-        snap.x.push_back(x);
-        snap.y.push_back(y);
-        snap.z.push_back(z);
-        snap.vx.push_back(vx);
-        snap.vy.push_back(vy);
-        snap.vz.push_back(vz);
-        snap.m.push_back(m);
-        snap.h.push_back(h);
-        snap.rho.push_back(rho);
+        snap.x.push_back(v[0]);
+        snap.y.push_back(v[1]);
+        snap.z.push_back(v[2]);
+        snap.vx.push_back(v[3]);
+        snap.vy.push_back(v[4]);
+        snap.vz.push_back(v[5]);
+        snap.m.push_back(v[6]);
+        snap.h.push_back(v[7]);
+        snap.rho.push_back(v[8]);
     }
     if (snap.size() == 0)
         throw std::runtime_error(

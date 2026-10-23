@@ -12,6 +12,12 @@
 #   phantom_dump          direct reader for Phantom binary dumps: synthetic dumps in many layouts vs the same
 #                         particles as plain ascii; malformed dumps rejected (tests/phantom_dump_test.py).
 #   example_configs       every configs/*.json loads through Config::load_from_file (tools/test_configs.cpp).
+#   polaris_writer       `kiwi write-polaris` on a synthetic cloud, decoded with decode_polaris_grid.py: header,
+#                         geometry (volumes, symmetric neighbours) and payload vs mapping.dat (polaris_writer_test.py).
+#                         validate_writer_polaris.py, the one-off check against the legacy grid-file.cc output,
+#                         needs that legacy file and is not run here.
+#   bad_input             malformed configs and snapshots must give a one-line `[kiwi] error` and exit 1
+#                         (bad_input_test.py).
 #   kernel_tables         derived kernel-integral coefficient tables vs brute-force quadrature
 #                         (tools/kernel_tables). Needs python3 (standard library only).
 
@@ -29,6 +35,12 @@ if(Python3_FOUND)
   add_test(NAME phantom_dump
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/phantom_dump_test.py
                    $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/phantom_dump_work)
+  add_test(NAME polaris_writer
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/polaris_writer_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/polaris_writer_work)
+  add_test(NAME bad_input
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/bad_input_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/bad_input_work)
   add_test(NAME kernel_tables
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/verify.py 4)
   # Real simulation snapshot (tests/data, not tracked by git); skipped (exit 77) when it is not there.

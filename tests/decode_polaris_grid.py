@@ -25,6 +25,7 @@ def decode(path):
     cells_d, length_scale = struct.unpack_from("<dd", data, off); off += 16
 
     cells = []
+    neighbors = []  # per cell: neighbour row indices (>= 0) or domain-wall markers (< 0)
     n = 0
     while off < len(data):
         x0, y0, z0 = struct.unpack_from("<fff", data, off); off += 12
@@ -33,10 +34,11 @@ def decode(path):
         (neigh,) = struct.unpack_from("<i", data, off); off += 4
         neighbor_ids = struct.unpack_from(f"<{neigh}i", data, off); off += 4 * neigh
         cells.append((x0, y0, z0, vol, vals, neigh))
+        neighbors.append(neighbor_ids)
         n += 1
 
     return {"sim": sim, "params": params, "plist": plist, "cells_d": cells_d,
-            "length_scale": length_scale, "cells": cells}
+            "length_scale": length_scale, "cells": cells, "neighbors": neighbors}
 
 
 if __name__ == "__main__":
