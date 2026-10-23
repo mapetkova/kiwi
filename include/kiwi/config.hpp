@@ -142,7 +142,8 @@ struct MappingConfig {
     std::string density_table; // optional: loaded if set and present, else auto-generated in memory
 };
 
-// Stage 5a: POLARIS binary grid writer. Reproduces the exact format
+// Stage 5a: POLARIS binary grid writer (EXPERIMENTAL: fixed quantity list, interface may change).
+// Reproduces the exact format
 // grid-file.cc wrote (header: sim/params/plist/cells_d/len; per cell:
 // position, volume, [gas temperature, vx, vy, vz, density], neighbor list --
 // see writer_polaris.cpp for the byte layout). That format bakes in a fixed

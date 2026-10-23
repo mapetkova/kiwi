@@ -79,6 +79,8 @@ int run_write_polaris(const std::string& config_path) {
     kiwi::Config cfg = kiwi::Config::load_from_file(config_path);
     std::cerr << "[kiwi] run: " << cfg.run_name << "\n";
     kiwi::check_manifest_consistency(cfg);
+    std::cerr << "[kiwi] note: write-polaris is experimental -- the written quantities (gas temperature, "
+                 "velocity, density) are fixed and the interface may change\n";
 
     // Chains from mapping (cached) and tessellation (also cached, see
     // run_tessellation_stage) for neighbor topology -- see writer_polaris.hpp.

@@ -19,7 +19,8 @@ It can produce:
 - **Density and velocity on a Cartesian grid**, either resampled from the Voronoi grid
   (`cartesian-map`) or computed directly from the particles (`sph-to-grid`).
 - **As an optional add-on**, the Voronoi grid written in the input format of the radiative-transfer
-  code [POLARIS](https://www1.astrophysik.uni-kiel.de/~polaris/), or as plain text.
+  code [POLARIS](https://www1.astrophysik.uni-kiel.de/~polaris/) (**experimental**, see below), or as plain
+  text.
 
 One JSON config per run drives every stage, and each stage caches its output, so re-running a
 config only recomputes what is missing.
@@ -66,7 +67,7 @@ Each stage runs the stages before it if their output is missing:
 | `kiwi cartesian-map <cfg>` | Resample the Voronoi result onto a Cartesian grid | `cartesian_map.dat` |
 | `kiwi sph-to-grid <cfg>` | Map particles directly onto a Cartesian grid (no Voronoi step) | `cartesian_grid.dat` |
 | `kiwi write-voronoi <cfg>` | Plain-text Voronoi grid | `grid-voronoi.txt` |
-| `kiwi write-polaris <cfg>` | Optional: POLARIS binary grid | `grid-polaris.dat` |
+| `kiwi write-polaris <cfg>` | Optional, experimental: POLARIS binary grid | `grid-polaris.dat` |
 | `kiwi inverse-mapping-test <cfg>` | Validation: map the grid back onto the particles | see log |
 | `kiwi manifest <cfg>` | Write `manifest.json` recording the settings behind each output | `manifest.json` |
 
@@ -110,8 +111,9 @@ Useful options:
   about 1e-11.
 - `mapping.use_tabulated_integral`: `false` (default) uses the analytic kernel integral. `true`
   uses a lookup table, which is faster but approximate.
-- `polaris_writer`: unit scales and temperature for the optional POLARIS output. The domain must
-  be a cube if you use it.
+- `polaris_writer` (experimental): unit scales and temperature for the optional POLARIS output. The domain must
+  be a cube if you use it. The written quantities are fixed (gas temperature, velocity, density), and this
+  part of the config and the `write-polaris` command may change as the writer is generalised.
 - `diagnostics.enabled`: writes diagnostic plots (needs Python with matplotlib).
 
 ## Input snapshots
@@ -222,7 +224,8 @@ The test data is generated on the fly, so nothing needs downloading.
 
 ## Known limitations
 
-- The POLARIS quantity list is fixed and not configurable.
+- The POLARIS writer is experimental: the quantity list (gas temperature, velocity, density) is fixed and
+  not configurable, it reproduces the grid format of one earlier project, and its interface may change.
 - `sph-to-grid` has no native POLARIS or ASCII writer yet.
 - The full-snapshot test covers `sph-to-grid` only; the Voronoi `map` stage is tested on synthetic data and
   on the small real cutout. A one-off run of `map` on the full 520k-particle snapshot (single-threaded, about
