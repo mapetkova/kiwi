@@ -201,7 +201,8 @@ ctest --output-on-failure
 - `synthetic_pipeline`: builds a small synthetic SPH cloud with a known total mass and bulk velocity,
   runs `sph-to-grid` and the full Voronoi pipeline, and checks that mass is conserved and the
   velocity is recovered, for every kernel. It needs Python 3 and nothing else.
-- `real_data` (about a minute): `sph-to-grid` on a real Phantom snapshot, `tests/data/brick_03927.ascii`
+- `real_data` (about 1.5 minutes on a laptop with 6 performance cores, 87 s with the default thread count and
+  99 s at 4 threads, so it barely depends on `OMP_NUM_THREADS`; much slower on a loaded shared machine): `sph-to-grid` on a real Phantom snapshot, `tests/data/brick_03927.ascii`
   (a `splash to ascii` dump of a cubic-spline run; ~350 MB, so it is not tracked by git and the test is
   skipped when the file is absent). Checks that mass and momentum on the grid equal the particle sums
   for the cubic, quintic and Wendland C6 kernels, that the generic integral reproduces the cubic fast

@@ -5,7 +5,7 @@
 #                         velocity recovery for sph-to-grid and the full Voronoi pipeline.
 #                         Needs python3 (standard library only).
 #   generic_kernel        generic-kernel analytic integral vs full_integral_new() (cubic) and brute-force quadrature.
-#   real_data             sph-to-grid on a real Phantom snapshot (tests/data/brick_03927.ascii, not in git, ~1 min):
+#   real_data             sph-to-grid on a real Phantom snapshot (tests/data/brick_03927.ascii, not in git, ~1.5 min):
 #                         mass/momentum conservation for several kernels, generic == fast path. Skipped if absent.
 #   real_data_cutout      the same on tests/data/brick_03927_cutout.ascii (x in [-36,-34], y in [-60,-58] pc, in git).
 #   kernel_spec_data_current  src/kernel_spec_data.cpp is what tools/kernel_tables/gen_cpp.py generates.
