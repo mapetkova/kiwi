@@ -34,6 +34,9 @@ set(VORO_SOURCES
 )
 add_library(voro_static STATIC ${VORO_SOURCES})
 target_include_directories(voro_static PUBLIC ${CMAKE_SOURCE_DIR}/third_party/voro/src)
+# Vendored, unmodified: macOS flags the sprintf calls in voro++'s draw_pov() (POV-Ray export, never called
+# by KIWI) as deprecated. Silence it for this target only rather than editing the upstream source.
+target_compile_options(voro_static PRIVATE -Wno-deprecated-declarations)
 
 # --- our library ---
 file(GLOB KIWI_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp)
