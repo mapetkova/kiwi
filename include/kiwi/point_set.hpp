@@ -1,7 +1,6 @@
 // Point-set stage: load particle sites, optionally add a boundary buffer
-// shell, optionally relax with N Lloyd iterations. This mirrors what the
-// legacy add-buffer-cells.py + lloyd-iterate.cc did, but as one config-driven
-// stage instead of two hand-run programs with independently-toggled boxes.
+// shell, optionally relax with N Lloyd iterations, as one config-driven
+// stage.
 #pragma once
 
 #include <string>
@@ -12,8 +11,8 @@
 namespace kiwi {
 
 // "id x y z" -- id is whatever voro++'s pre_container/container expect as a
-// particle identifier (not necessarily contiguous or 0-based; we preserve
-// whatever the input file used, exactly as the legacy tools did).
+// particle identifier (not necessarily contiguous or 0-based; whatever the
+// input file used is preserved).
 struct PointSet {
     std::vector<int> id;
     std::vector<double> x, y, z;
@@ -25,19 +24,19 @@ struct PointSet {
 PointSet load_point_set(const std::string& path);
 void save_point_set(const PointSet& points, const std::string& path);
 
-// Exact port of add-buffer-cells.py. Appends buffer points to `points` and
-// returns the new set (does not mutate the input). Only valid for the
-// "legacy_brick" strategy -- see BufferConfig.
-PointSet add_legacy_brick_buffer(const PointSet& points, const Domain& domain,
-                                  const LegacyBrickBufferParams& params);
+// Appends the graded-shells buffer points (see GradedShellsBufferParams) to `points`
+// and returns the new set (does not mutate the input). Only valid for the
+// "graded_shells" strategy -- see BufferConfig.
+PointSet add_graded_shells_buffer(const PointSet& points, const Domain& domain,
+                                  const GradedShellsBufferParams& params);
 
 // Generic particle-coverage buffer strategy (see CoverageGridBufferParams).
 // `h` must be aligned by index with `points` (i.e. h[i] is the smoothing
 // length of points.id[i]/x[i]/y[i]/z[i]) -- this is only meaningful before
 // any Lloyd relaxation moves the sites away from their originating
 // particles, so it should be called right after extract_points(), same as
-// the legacy_brick call site. Appends buffer points (new sequential ids
-// starting at points.size()+1, matching add_legacy_brick_buffer's
+// the graded_shells call site. Appends buffer points (new sequential ids
+// starting at points.size()+1, matching add_graded_shells_buffer's
 // convention) and returns the new set.
 PointSet add_coverage_grid_buffer(const PointSet& points, const std::vector<double>& h,
                                    const Domain& domain, const CoverageGridBufferParams& params);
@@ -73,7 +72,7 @@ CartesianLattice generate_cartesian_lattice(const Domain& domain, double spacing
 
 // One Lloyd relaxation step: build a Voronoi tessellation of `points` inside
 // `domain` (using `blocks` for voro++'s spatial hashing), then move every
-// site to its cell's centroid. Exact port of lloyd-iterate.cc.
+// site to its cell's centroid.
 PointSet lloyd_step(const PointSet& points, const Domain& domain, const GridBlocks& blocks);
 
 // Extracts points from cfg.input_snapshot, then runs buffer (if enabled)

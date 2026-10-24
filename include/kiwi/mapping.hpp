@@ -1,16 +1,10 @@
 // Stage 4: maps SPH particle density and mass-weighted velocity onto the
 // final Voronoi grid (post buffer + Lloyd).
 //
-// The two legacy tools this replaces (cell_density_BFS_data_uneven-tabulated
-// .cc and cell_velocity_uneven-tabulated.cc, "mass-average" variant) each
-// did their own independent breadth-first walk over the tessellation,
-// re-evaluating the same expensive SPH kernel line integral per
-// (particle, cell) pair -- once to accumulate mass for density, once again
-// to accumulate mass-weighted velocity. This stage merges them: a single BFS walk evaluates the integral once per
-// (particle, cell) pair and accumulates both outputs from that one value.
-//
-// Smoothing (the legacy issmooth/smoothfact knobs) is dropped entirely, not
-// defaulted off -- confirmed an obsolete artefact.
+// A single breadth-first walk over the tessellation evaluates the expensive
+// SPH kernel line integral once per (particle, cell) pair and accumulates
+// both outputs -- mass for density, mass-weighted velocity -- from that one
+// value. No smoothing is applied to the result.
 #pragma once
 
 #include <string>

@@ -68,11 +68,11 @@ void save_point_set(const PointSet& points, const std::string& path) {
     }
 }
 
-// Exact port of add-buffer-cells.py. Kept deliberately close to the
-// original's variable names/structure (rather than "cleaned up") so it can
-// be diffed against the source it was ported from.
-PointSet add_legacy_brick_buffer(const PointSet& points, const Domain& d,
-                                  const LegacyBrickBufferParams& p) {
+// The graded-shells buffer: three nested shells of synthetic points around
+// the faces of the domain, with spacing growing outward (see
+// GradedShellsBufferParams).
+PointSet add_graded_shells_buffer(const PointSet& points, const Domain& d,
+                                  const GradedShellsBufferParams& p) {
     PointSet out = points;
     long l = static_cast<long>(points.size());
     long num = 0;
@@ -253,7 +253,7 @@ PointSet add_coverage_grid_buffer(const PointSet& points, const std::vector<doub
     // Voronoi regression test (tools/test_lattice_grid.cpp) -- see
     // generate_cartesian_lattice() above. Ids get renumbered here to just the
     // surviving (uncovered) candidates, sequential starting at
-    // points.size()+1, matching add_legacy_brick_buffer's convention -- the
+    // points.size()+1, matching add_graded_shells_buffer's convention -- the
     // lattice's own ids (which number every candidate, covered or not) are
     // discarded.
     CartesianLattice lat = generate_cartesian_lattice(d, params.spacing_fraction);
@@ -314,7 +314,7 @@ PointSet run_point_set_stage(const Config& cfg) {
 
     // Real-particle count, fixed at this point regardless of whether a
     // buffer runs below -- every buffer strategy appends new points with ids
-    // starting at n_real+1 (see add_legacy_brick_buffer/
+    // starting at n_real+1 (see add_graded_shells_buffer/
     // add_coverage_grid_buffer), so "id <= n_real" identifies a real
     // (SPH-derived) site at any later stage, including after Lloyd
     // relaxation reorders rows. Diagnostics uses this split; nothing else
@@ -323,8 +323,8 @@ PointSet run_point_set_stage(const Config& cfg) {
 
     if (cfg.buffer.enabled) {
         size_t n_before = points.size();
-        if (cfg.buffer.strategy == "legacy_brick") {
-            points = add_legacy_brick_buffer(points, cfg.domain, cfg.buffer.legacy_brick);
+        if (cfg.buffer.strategy == "graded_shells") {
+            points = add_graded_shells_buffer(points, cfg.domain, cfg.buffer.graded_shells);
         } else if (cfg.buffer.strategy == "coverage_grid") {
             // snap.h is aligned by index with the points extract_points()
             // just produced from it -- must run before Lloyd relaxation
@@ -333,7 +333,7 @@ PointSet run_point_set_stage(const Config& cfg) {
         } else {
             throw std::runtime_error(
                 "buffer.strategy '" + cfg.buffer.strategy +
-                "' is not recognized (expected 'legacy_brick' or 'coverage_grid')");
+                "' is not recognized (expected 'graded_shells' or 'coverage_grid')");
         }
         std::cerr << "[kiwi] buffer (" << cfg.buffer.strategy << "): added "
                   << (points.size() - n_before) << " buffer point(s), " << points.size()

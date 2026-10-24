@@ -76,6 +76,10 @@ def main():
          cfg(input_snapshot="random.bin", input_snapshot_format="phantom_binary"), "capture pattern"),
         ("unknown snapshot format", "sph-to-grid", cfg(input_snapshot_format="fits"), "input_snapshot_format"),
         ("removed format name dale_phantom", "sph-to-grid", cfg(input_snapshot_format="dale_phantom"), "input_snapshot_format"),
+        ("removed buffer strategy name legacy_brick", "point-set",
+         cfg(buffer={"enabled": True, "strategy": "legacy_brick"}), "not recognized"),
+        ("graded_shells without its parameters", "point-set",
+         cfg(buffer={"enabled": True, "strategy": "graded_shells"}), "graded_shells params are missing"),
         ("unknown kernel", "sph-to-grid", cfg(kernel={"name": "gaussian"}), "unknown kernel"),
         ("zero resolution", "sph-to-grid", cfg(cartesian_grid={"resolution": 0}), "resolution must be > 0"),
         ("negative resolution", "sph-to-grid", cfg(cartesian_grid={"resolution": -4}), "resolution must be > 0"),
@@ -126,6 +130,10 @@ def main():
     check("unknown stage: exit 1", r.returncode == 1 and "unknown stage" in r.stderr)
     r = run(["sph-to-grid", "good.json"])
     check("the unmodified good config runs", r.returncode == 0, f"exit={r.returncode}")
+    write("buffer_default.json", json.dumps(cfg(buffer={"enabled": True})))
+    r = run(["point-set", "buffer_default.json"])
+    check("buffer.enabled without a strategy uses coverage_grid", r.returncode == 0 and "buffer (coverage_grid)" in r.stderr,
+          f"exit={r.returncode}")
 
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1

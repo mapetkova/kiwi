@@ -42,9 +42,8 @@ namespace {
 // several times the footprint of the geometry alone. Retaining ~450k live
 // voronoicell_neighbor objects (one per grid cell, needed simultaneously
 // since the BFS from different particles revisits the same cells
-// repeatedly) is what the legacy tools' "voronoicell_neighbor c_list[cells]"
-// global array did too, but it pushed memory use well past what fits in a
-// constrained environment. Extracting just f_vert/f_coord/n_list/volume once
+// repeatedly) would push memory use well past what fits in a constrained
+// environment. Extracting just f_vert/f_coord/n_list/volume once
 // per cell and discarding the voro++ object cuts that down to the data
 // compute_cell_integral() actually reads.
 struct CellFaceGeometry {
@@ -95,14 +94,10 @@ int64_t face_cache_key(int a, int b) {
 }
 
 // The shared evaluation of the SPH kernel line integral for one
-// (particle, cell) pair -- ported from the legacy compute_mass() (density)
-// and compute_int() (velocity) functions, which were identical except for
-// one detail: compute_int() clamped a slightly-negative Msum (a face-marching
-// numerical artefact) to zero, while compute_mass() did not. Since this one
-// value now feeds both density and velocity, the clamp is applied
-// unconditionally -- an unclamped small negative contribution would
-// otherwise corrupt density too, which the density-only tool never had to
-// guard against because it never saw the velocity code's clamp.
+// (particle, cell) pair. A slightly-negative Msum (a face-marching numerical
+// artefact) is clamped to zero. Since this one value feeds both density and
+// velocity, the clamp is applied unconditionally -- an unclamped small
+// negative contribution would otherwise corrupt the density too.
 //
 // While walking this cell's faces, any unvisited neighbor still reachable by
 // this particle's kernel (out_vert < number of face vertices) is appended to
@@ -434,14 +429,11 @@ MappingResult run_mapping_stage(const Config& cfg) {
 
         double fx, fy, fz;
         int site_id;
-        // The legacy tools never checked this return value -- if a particle
-        // lies outside the domain box, find_voronoi_cell() returns false
-        // *without* setting site_id, so the legacy code went on to index
-        // reverse_id_list[] with an uninitialized value (undefined
-        // behavior, never triggered in the original runs only because
-        // every particle they fed it happened to land inside the box).
-        // Particles outside the box genuinely have no cell to contribute
-        // to, so skip them explicitly instead.
+        // If a particle lies outside the domain box, find_voronoi_cell()
+        // returns false *without* setting site_id, so the return value must
+        // be checked before indexing reverse_id_list[] (an uninitialized
+        // site_id would be undefined behavior). Particles outside the box
+        // genuinely have no cell to contribute to, so they are skipped.
         bool found = con.find_voronoi_cell(x0, y0, z0, fx, fy, fz, site_id);
         int k = (found && site_id >= 0 && site_id <= max_id) ? reverse_id_list[site_id] : -1;
         if (k == -1) {

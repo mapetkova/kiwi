@@ -14,8 +14,6 @@
 #   example_configs       every configs/*.json loads through Config::load_from_file (tools/test_configs.cpp).
 #   polaris_writer       `kiwi write-polaris` on a synthetic cloud, decoded with decode_polaris_grid.py: header,
 #                         geometry (volumes, symmetric neighbours) and payload vs mapping.dat (polaris_writer_test.py).
-#                         validate_writer_polaris.py, the one-off check against the legacy grid-file.cc output,
-#                         needs that legacy file and is not run here.
 #   bad_input             malformed configs and snapshots must give a one-line `[kiwi] error` and exit 1
 #                         (bad_input_test.py).
 #   version_consistent    `kiwi --version` equals the version in CITATION.cff.

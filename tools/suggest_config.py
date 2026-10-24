@@ -333,8 +333,8 @@ def _load_splash_ascii(path):
     physics modules a given Phantom run had switched on (see
     write_sphdump(), SPLASH's own write_sphdata.f90), and even whether an
     itype column is written at all depends on whether the dump has more
-    than one particle type. `pressure` (present in the original brick_01000
-    snapshots) is recognized as a known label but never required or kept,
+    than one particle type. `pressure` (present in some snapshots)
+    is recognized as a known label but never required or kept,
     since nothing downstream of this script uses it.
 
     If either `h` or `density` is missing, the other is derived via

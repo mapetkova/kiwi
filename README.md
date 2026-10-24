@@ -49,8 +49,8 @@ cmake .. -DCMAKE_CXX_COMPILER=$(brew --prefix llvm)/bin/clang++ -DOpenMP_ROOT=$(
 
 ## Quick start
 
-1. Copy one of the configs in `configs/` and edit the paths. `hdens-00282-smoke-test.json` is
-   the fastest. Set `input_snapshot` to your snapshot and `domain` to the box you want to map.
+1. Copy `configs/example-cutout.json` (see the worked example below) and edit it: set `input_snapshot` to
+   your snapshot and `domain` to the box you want to map.
 2. Run a stage, from the repo root:
 
 ```
@@ -116,8 +116,10 @@ largest kernel support around the particles, as `tests/real_data_test.py` does.
 
 Useful options:
 
-- `buffer.strategy`: `"coverage_grid"` (general purpose) or `"legacy_brick"` (specific to one
-  cloud geometry). A buffer of extra points keeps the cells at the domain edge finite.
+- `buffer`: `{"enabled": true}` adds a buffer of extra points that keeps the cells at the domain edge
+  finite (default: off). `buffer.strategy` is `"coverage_grid"` (the default, general purpose) or
+  `"graded_shells"` (three shells of growing spacing, written for one slab-shaped cloud geometry; needs
+  `buffer.graded_shells` with `dx`, `dy`, `dz`).
 - `kernel`: the SPH kernel the snapshot was run with. Default is the cubic spline; the others are
   `quartic_spline`, `quintic_spline`, `wendland_c2`, `wendland_c4` and `wendland_c6` (all analytic;
   the tabulated integral exists only for the cubic spline):

@@ -10,9 +10,6 @@ decodes grid-polaris.dat with decode_polaris_grid.py, then checks it against the
   payload     per cell: uniform gas temperature, velocity and density equal mapping.dat's, scaled by the
               polaris_writer settings (float32 precision), rows in ascending cell id.
 
-(validate_writer_polaris.py is the one-off cross-check against the legacy grid-file.cc output; it needs
-that legacy file and is not run here.)
-
 Usage: polaris_writer_test.py <path-to-kiwi-executable> [work_dir]
 Exit code 0 on success, 1 on any failure (this is what ctest looks at).
 """

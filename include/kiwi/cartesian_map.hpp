@@ -3,8 +3,7 @@
 // tools/plot_cartesian_map.py). NOT part of the pipeline's data contract,
 // purely a convenience output.
 //
-// Direct port of the algorithm in the original grid-3d-cartesian-map.cc: for
-// each Cartesian grid-cell center inside cfg.domain, find the enclosing
+// For each Cartesian grid-cell center inside cfg.domain, find the enclosing
 // Voronoi cell via voro++'s own nearest-site search
 // (container::find_voronoi_cell(), which is exactly "the particle whose
 // Voronoi cell contains this point" for voro++'s plain, unweighted

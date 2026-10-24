@@ -1,15 +1,13 @@
-// Provenance manifest -- the direct fix for a bug class in the legacy tools:
-// grid-file.cc silently read self-virialised density/velocity files against
-// tidal grid geometry, because every legacy tool's in-place toggle state
-// told you nothing about which state produced any already-generated file.
+// Provenance manifest -- records which config and which input/output files
+// produced a run directory, so that stale cached output is detected instead
+// of silently reused.
 //
-// Every stage in this tool is cached: if its output file already exists
-// under cfg.run_dir(), it's loaded instead of recomputed (see point_set.hpp,
-// mapping.hpp, etc.). That's fast, but it reintroduces exactly the same risk
-// in a new form -- a cached mapping.dat sitting in a run directory tells you
-// nothing about which config (tabulated vs analytic integral, which density
-// table, ...) produced it, so a config edit followed by a re-run can
-// silently reuse stale output computed under the OLD config.
+// Every stage is cached: if its output file already exists under
+// cfg.run_dir(), it's loaded instead of recomputed (see point_set.hpp,
+// mapping.hpp, etc.). That's fast, but a cached mapping.dat sitting in a run
+// directory tells you nothing about which config (tabulated vs analytic
+// integral, which density table, ...) produced it, so a config edit followed
+// by a re-run could silently reuse stale output computed under the OLD config.
 //
 // The manifest closes that gap: cfg.to_json() is the single source of truth
 // for a run (see config.hpp), so it's stamped into manifest.json alongside

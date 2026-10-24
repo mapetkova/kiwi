@@ -13,7 +13,7 @@
 // matplotlib isn't available, generate_diagnostic_plot() prints a warning
 // and returns; it never throws, so a missing plotting toolchain can't break
 // a real run (same "warn, don't block" pattern as the OpenMP-not-found and
-// manifest-mismatch cases elsewhere in this tool).
+// manifest-mismatch cases elsewhere).
 #pragma once
 
 #include <cstddef>

@@ -24,10 +24,9 @@ struct Tessellation {
     std::vector<CellGeometry> cells;
 };
 
-// Builds a Voronoi tessellation of `points` inside `domain`. This is a
-// direct port of the con.compute_cell/c_loop_all sequence in grid-file.cc,
-// factored out so it can be called independently of reading/writing any
-// particular file format.
+// Builds a Voronoi tessellation of `points` inside `domain` (a
+// con.compute_cell/c_loop_all sequence over a voro++ container), independent
+// of reading/writing any particular file format.
 Tessellation tessellate_voronoi(const PointSet& points, const Domain& domain, const GridBlocks& blocks);
 
 // Parses the format save_tessellation_summary() writes ("id x y z volume
@@ -49,8 +48,7 @@ Tessellation load_tessellation(const std::string& path);
 // so it still does its own separate voro++ build.
 Tessellation run_tessellation_stage(const Config& cfg);
 
-// Diagnostics mirroring grid-file.cc's own printf checks: cells with
-// non-positive volume, and the count of input points that didn't produce a
+// Diagnostics: cells with non-positive volume, and the count of input points that didn't produce a
 // computed cell at all (voro++'s compute_cell() can return false for a
 // point in a degenerate configuration -- e.g. at a domain wall during Lloyd
 // relaxation).

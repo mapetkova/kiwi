@@ -8,9 +8,9 @@
 namespace kiwi {
 
 // Strips directory components and the last extension only (e.g.
-// "/a/b/ascii_CMZ_..._00147.out" -> "ascii_CMZ_..._00147"). Deliberately
-// simple -- multi-dot filenames keep everything before the *last* dot, which
-// matches how every snapshot file we've seen is named.
+// "/a/b/snapshot_00147.out" -> "snapshot_00147"). Deliberately simple --
+// multi-dot filenames keep everything before the *last* dot, which matches
+// how snapshot files are normally named.
 static std::string trimmed_basename(const std::string& path) {
     std::string base = path;
     auto slash = base.find_last_of('/');
@@ -90,17 +90,17 @@ Config Config::load_from_file(const std::string& path) {
         if (j.contains("buffer")) {
             const auto& b = j["buffer"];
             c.buffer.enabled = b.value("enabled", false);
-            c.buffer.strategy = b.value("strategy", std::string("legacy_brick"));
-            if (c.buffer.enabled && c.buffer.strategy == "legacy_brick") {
-                if (!b.contains("legacy_brick"))
-                    throw ConfigError("buffer.strategy is legacy_brick but buffer.legacy_brick params are missing");
-                const auto& lb = b.at("legacy_brick");
-                c.buffer.legacy_brick.dx = lb.at("dx").get<double>();
-                c.buffer.legacy_brick.dy = lb.at("dy").get<double>();
-                c.buffer.legacy_brick.dz = lb.at("dz").get<double>();
-                c.buffer.legacy_brick.shell_spacing_1 = lb.value("shell_spacing_1", 3.0);
-                c.buffer.legacy_brick.shell_spacing_2 = lb.value("shell_spacing_2", 4.0);
-                c.buffer.legacy_brick.shell_spacing_3 = lb.value("shell_spacing_3", 5.0);
+            c.buffer.strategy = b.value("strategy", std::string("coverage_grid"));
+            if (c.buffer.enabled && c.buffer.strategy == "graded_shells") {
+                if (!b.contains("graded_shells"))
+                    throw ConfigError("buffer.strategy is graded_shells but buffer.graded_shells params are missing");
+                const auto& lb = b.at("graded_shells");
+                c.buffer.graded_shells.dx = lb.at("dx").get<double>();
+                c.buffer.graded_shells.dy = lb.at("dy").get<double>();
+                c.buffer.graded_shells.dz = lb.at("dz").get<double>();
+                c.buffer.graded_shells.shell_spacing_1 = lb.value("shell_spacing_1", 3.0);
+                c.buffer.graded_shells.shell_spacing_2 = lb.value("shell_spacing_2", 4.0);
+                c.buffer.graded_shells.shell_spacing_3 = lb.value("shell_spacing_3", 5.0);
             }
             if (c.buffer.enabled && c.buffer.strategy == "coverage_grid") {
                 const auto& cg = b.value("coverage_grid", json::object());
@@ -217,13 +217,13 @@ json Config::to_json() const {
     json b;
     b["enabled"] = buffer.enabled;
     b["strategy"] = buffer.strategy;
-    if (buffer.strategy == "legacy_brick") {
-        b["legacy_brick"] = {{"dx", buffer.legacy_brick.dx},
-                              {"dy", buffer.legacy_brick.dy},
-                              {"dz", buffer.legacy_brick.dz},
-                              {"shell_spacing_1", buffer.legacy_brick.shell_spacing_1},
-                              {"shell_spacing_2", buffer.legacy_brick.shell_spacing_2},
-                              {"shell_spacing_3", buffer.legacy_brick.shell_spacing_3}};
+    if (buffer.strategy == "graded_shells") {
+        b["graded_shells"] = {{"dx", buffer.graded_shells.dx},
+                              {"dy", buffer.graded_shells.dy},
+                              {"dz", buffer.graded_shells.dz},
+                              {"shell_spacing_1", buffer.graded_shells.shell_spacing_1},
+                              {"shell_spacing_2", buffer.graded_shells.shell_spacing_2},
+                              {"shell_spacing_3", buffer.graded_shells.shell_spacing_3}};
     } else if (buffer.strategy == "coverage_grid") {
         b["coverage_grid"] = {{"spacing_fraction", buffer.coverage_grid.spacing_fraction},
                                {"coverage_radius_factor", buffer.coverage_grid.coverage_radius_factor}};

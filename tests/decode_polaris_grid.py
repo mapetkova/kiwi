@@ -1,8 +1,8 @@
-"""Decode a legacy POLARIS Voronoi grid file (grid-file.cc's binary format)
-for validation purposes. Not part of the tool itself -- a throwaway
-cross-check script.
+"""Decode a POLARIS Voronoi grid file (the binary format `kiwi write-polaris`
+writes) for validation purposes. Not part of the tool itself -- used by
+polaris_writer_test.py.
 
-Format (see grid-file.cc / GridVoronoi.cpp analysis):
+Format (as read by POLARIS's GridVoronoi::loadGridFromBinaryFile):
   header: unsigned short sim, unsigned short params, unsigned short plist[params],
           double cells_d, double len
   per cell (rows are implicitly ordered by ascending original particle id,

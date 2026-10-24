@@ -37,11 +37,8 @@ int run_tessellate(const std::string& config_path) {
 
     // Cached like every other stage: run_tessellation_stage() loads
     // "tessellation.dat" directly if it already exists instead of rebuilding
-    // the voro++ container from scratch -- this used to be the one stage
-    // command that always recomputed even when nothing had changed (and the
-    // write-polaris/write-voronoi commands each did their own separate
-    // from-scratch tessellation pass on top of that). Delete
-    // tessellation.dat (or the run directory) to force a recompute.
+    // the voro++ container from scratch. Delete tessellation.dat (or the run
+    // directory) to force a recompute.
     kiwi::Tessellation tess = kiwi::run_tessellation_stage(cfg);
     std::cerr << "[kiwi] computed " << tess.cells.size() << " cells\n";
 

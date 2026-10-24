@@ -198,7 +198,7 @@ double msun_pc3_to_g_cm3() {
     return msun_g / (pc_cm * pc_cm * pc_cm);
 }
 
-// Only the columns this tool actually needs -- or needs to recognize in
+// Only the columns KIWI actually needs -- or needs to recognize in
 // order to treat specially, like itype -- are listed here. Any other
 // column present in a given file (pressure, alpha, div_v, poten, dt, or a
 // physics-module column this codebase has never heard of -- Bx/By/Bz for

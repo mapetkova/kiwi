@@ -46,7 +46,7 @@ constexpr char kMagic[8] = {'V', 'G', 'T', 'C', 'G', 'R', 'D', '2'};
 // (a large box fully enclosing an h=1 particle's kernel support must sum to
 // Msum == 1.0, the kernel's own normalization) and (2) an end-to-end ground truth -- a
 // single SPH particle centered in a cubic domain has exactly one Voronoi
-// cell (the whole domain box), so running the existing, already-validated
+// cell (the whole domain box), so running the
 // `kiwi map` pipeline on that exact setup gives an independent
 // density*volume == 1.0 to compare against. The naive outward-normal
 // winding gave Msum == -1.0 on test (1) (wrong sign, right magnitude) until
@@ -173,7 +173,7 @@ CartesianGridResult run_sph_to_grid_stage(const Config& cfg) {
     // erases most of the parallel speedup. Cost here: O(resolution^3 *
     // n_threads) extra memory -- e.g. res=128, 8 threads is ~512MB (4
     // arrays x 8 threads x 2,097,152 cells x 8 bytes). Trivial next to a
-    // real SPH snapshot's own memory footprint at this tool's usual
+    // real SPH snapshot's own memory footprint at usual
     // resolutions, but worth knowing before cranking resolution and thread
     // count both up at once.
     std::vector<std::vector<double>> dens_t(n_threads, std::vector<double>(n, 0.0));

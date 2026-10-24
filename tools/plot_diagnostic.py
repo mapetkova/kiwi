@@ -9,7 +9,7 @@ Usage:
 id <= n_real are drawn as "real" (SPH-particle-derived) sites; points with
 id > n_real are drawn as "buffer" sites, matching the id convention every
 buffer strategy in point_set.cpp uses (buffer ids start at n_real + 1, see
-add_legacy_brick_buffer / add_coverage_grid_buffer).
+add_graded_shells_buffer / add_coverage_grid_buffer).
 
 This is invoked automatically by kiwi (via std::system, from diagnostics.cpp)
 whenever "diagnostics": {"enabled": true} is set in a run's config -- it is

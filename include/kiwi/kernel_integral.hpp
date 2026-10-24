@@ -6,16 +6,9 @@
 // and mass-weighted velocity are derived from -- see mapping.hpp for how
 // it's shared between the two rather than evaluated twice.
 //
-// Ported from the legacy density/velocity mapping tools. One thing from
-// those tools is deliberately NOT ported: kernel()/line()/area()/volume(), a
-// numerical-quadrature path that backed a third, even-more-expensive
-// alternative to full_integral_new (the "//M = M*(volume(...))" lines,
-// always commented out in every legacy tool -- genuinely unreachable, not
-// merely unused). full_integral_new() itself IS ported and kept reachable
-// (see mapping.hpp's use_tabulated_integral) -- every legacy tool hardcoded
-// is_tabulated=true at its call sites so full_integral_new never actually
-// ran in producing a historical grid, but it's the closed-form reference the
-// table approximates, so it stays available to run directly.
+// full_integral_new() is the closed-form reference the table approximates,
+// so it stays available to run directly (see mapping.hpp's
+// use_tabulated_integral).
 #pragma once
 
 #include <string>
@@ -25,14 +18,12 @@
 
 namespace kiwi {
 
-// Loaded from a "density-map-grid-<...>.dat" file: a 3D table of the kernel
-// line integral over (r0, mu0, cos(phi)), used for trilinear interpolation
-// in gridded_integral(). The header fields (nr01/nR_01/nphi1/rl/mul/cphil/
+// Loaded from a density-table file: a 3D table of the kernel line integral
+// over (r0, mu0, cos(phi)), used for trilinear interpolation in
+// gridded_integral(). The header fields (nr01/nR_01/nphi1/rl/mul/cphil/
 // nr02/nR_02/nphi2) are read from the file and stored here rather than
-// duplicated as hardcoded constants inside the interpolation routine (the
-// legacy code re-declared matching constants in two places -- the loader and
-// gridded_integral() itself -- which happened to agree but had no code path
-// enforcing that).
+// duplicated as hardcoded constants inside the interpolation routine, so the
+// loader and the interpolator cannot disagree about the grid.
 struct DensityLookupTable {
     int nr01 = 0, nR_01 = 0, nphi1 = 0;
     int nr02 = 0, nR_02 = 0, nphi2 = 0;
@@ -50,36 +41,29 @@ struct DensityLookupTable {
 
 DensityLookupTable load_density_table(const std::string& path);
 
-// Builds the same table load_density_table() would load from
-// "density-map-grid-250-300-300.dat", but computed in memory via
-// full_integral_new() instead of read from disk -- for when
-// mapping.use_tabulated_integral is set but no such file is available (see
-// run_mapping_stage() in mapping.cpp for where this is triggered).
+// Builds the table load_density_table() would load from a file, but
+// computed in memory via full_integral_new() instead of read from disk --
+// for when mapping.use_tabulated_integral is set but no table file is
+// available (see run_mapping_stage() in mapping.cpp for where this is
+// triggered).
 //
-// This is a direct port of the grid this project's historical tabulated
-// tools were actually generated from -- CMacIonize's
-// SPHArrayInterface::gridding() (Vandenbroucke et al., not part of this
-// tool's own source, provided as the canonical reference to
-// reproduce) -- not a new design: same fixed grid shape (nr01=50, nr02=199,
-// nR_01=nR_02=nphi1=nphi2=150; rl=0.1, mul=0.98, cphil=0.98, matching the
-// real density-map-grid-250-300-300.dat's own header exactly) and the same
-// per-cell r0/mu0/phi formulas, just evaluated with this codebase's already-
-// validated full_integral_new() in place of gridding()'s own full_integral()
-// (the same closed-form kernel line integral both are named after -- see
-// full_integral_new()'s own doc comment). Deliberately not configurable:
-// like writer_polaris.cpp's POLARIS quantity-ID list, this reproduces one
-// specific, already-validated historical table, not a general table
-// generator -- revisit if a different grid shape is ever needed.
+// The grid follows CMacIonize's SPHArrayInterface::gridding()
+// (Vandenbroucke et al.): the same fixed grid shape (nr01=50, nr02=199,
+// nR_01=nR_02=nphi1=nphi2=150; rl=0.1, mul=0.98, cphil=0.98) and the same
+// per-cell r0/mu0/phi formulas, evaluated with full_integral_new() (the
+// closed-form kernel line integral, see its own doc comment). Deliberately
+// not configurable: like writer_polaris.cpp's POLARIS quantity-ID list, this
+// is one specific table, not a general table generator -- revisit if a
+// different grid shape is ever needed.
 //
-// Note the same divide-by-mu0==0 (j==0, i.e. mu0=0.0) that gridding() has
-// at its first mu0 grid point is reproduced here too, not special-cased
-// around: it produces R_0 = +inf (IEEE-754 double division), which flows
-// through to a well-defined finite full_integral_new() result because that
-// large-R_0 regime lands in the linedist2 > 4h^2 branch, where the terms
-// that would otherwise multiply infinity by something nonzero either
-// vanish (I1 = atan(u/a) -> atan(0) = 0) or are already zero (D2, D3) --
-// confirmed by this behavior reproducing the real table file's own finite
-// values at those grid points during validation, not by inspection alone.
+// The first mu0 grid point (j==0, mu0=0.0) divides by zero. That is kept
+// rather than special-cased: it produces R_0 = +inf (IEEE-754 double
+// division), which flows through to a well-defined finite
+// full_integral_new() result because that large-R_0 regime lands in the
+// linedist2 > 4h^2 branch, where the terms that would otherwise multiply
+// infinity by something nonzero either vanish (I1 = atan(u/a) -> atan(0) =
+// 0) or are already zero (D2, D3). The values at those grid points were
+// checked against a table file generated by the original code.
 DensityLookupTable generate_density_table();
 
 // phi, r0, R_0 are in the same physical length units as the grid/particle
@@ -150,8 +134,8 @@ double vertex_integral(const WallIntegralConstants& wall, const EdgeIntegralCons
 // The full per-face contribution to Msum for one planar, convex,
 // outward-wound polygonal face -- factored out of the per-face body of the
 // edge loop in mapping.cpp's compute_cell_integral() so any caller with
-// explicit face-vertex coordinates in hand can reuse the exact same,
-// already-validated math, not just a caller walking a voro++
+// explicit face-vertex coordinates in hand can reuse the exact same
+// math, not just a caller walking a voro++
 // voronoicell_neighbor's packed face_vertices()/vertices() arrays.
 //
 // Used by:

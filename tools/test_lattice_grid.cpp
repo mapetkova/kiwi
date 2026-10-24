@@ -17,9 +17,8 @@
 //
 // This is also the ground-truth reference fixture for validating
 // sph-to-grid (the direct SPH -> Cartesian mapping): the same lattice, fed
-// through this tool's existing
-// (already-validated) kernel-integral mapping machinery, gives known-correct
-// density/velocity values to check the new fast path against.
+// through the Voronoi pipeline's kernel-integral mapping machinery, gives
+// known-correct density/velocity values to check the direct path against.
 //
 // Usage: test_lattice_grid [N] [extent] [block_scale_factor]
 //   N       -- lattice points per axis (domain is an NxNxN cube). Default 8.

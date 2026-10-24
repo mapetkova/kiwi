@@ -1,14 +1,12 @@
-// Stage 5a: POLARIS binary grid writer. Reproduces the exact binary format
-// grid-file.cc wrote (see tests/decode_polaris_grid.py for the byte layout
-// this was reverse-engineered from and validated against).
+// Stage 5a: POLARIS binary grid writer (experimental, see PolarisWriterConfig;
+// tests/decode_polaris_grid.py documents the byte layout).
 //
-// Differs from the legacy writer in one deliberate way: neighbor ids are
-// translated through an explicit id -> output-row-index map built from the
-// cells actually being written, rather than the legacy code's `id - 1`
-// assumption (which silently produces wrong neighbor references whenever
-// any site in [1, max_id] failed to produce a tessellated cell -- rare, but
-// confirmed to happen). A neighbor reference to a
-// missing cell is dropped and counted, never miswired to the wrong row.
+// Neighbor ids are translated through an explicit id -> output-row-index map
+// built from the cells actually being written, not by assuming row = id - 1
+// (which would silently produce wrong neighbor references whenever any site
+// in [1, max_id] failed to produce a tessellated cell -- rare, but it
+// happens). A neighbor reference to a missing cell is dropped and counted,
+// never miswired to the wrong row.
 #pragma once
 
 #include <string>

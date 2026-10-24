@@ -55,9 +55,8 @@ DensityLookupTable load_density_table(const std::string& path) {
 }
 
 DensityLookupTable generate_density_table() {
-    // Canonical grid shape, matching density-map-grid-250-300-300.dat's own
-    // header exactly (50 150 150 / 0.1 0.98 0.98 / 199 150 150) -- see the
-    // header comment on the declaration for provenance.
+    // Canonical grid shape (50 150 150 / 0.1 0.98 0.98 / 199 150 150) -- see
+    // the header comment on the declaration for provenance.
     DensityLookupTable t;
     t.nr01 = 50;
     t.nr02 = 199;
@@ -81,8 +80,7 @@ DensityLookupTable generate_density_table() {
 
     // n here is gridding()'s single shared sub-grid size (nR_01 == nR_02 ==
     // nphi1 == nphi2 == 150 in the canonical grid) -- kept as one local to
-    // mirror the source this is ported from, not implying it could differ
-    // per axis; if it ever needs to, the four t.nR_0*/t.nphi* fields above
+    // mirror gridding(), not implying it could differ per axis; if it ever needs to, the four t.nR_0*/t.nphi* fields above
     // already carry the real (currently-equal) values independently.
     const int n = t.nR_01;
 
@@ -121,10 +119,8 @@ DensityLookupTable generate_density_table() {
 
 namespace {
 // Clamp an interpolation index into the table's valid range instead of
-// reading out of bounds -- the legacy code relied on a fixed-size C array
-// generously over-allocated beyond the nominal table dimensions to survive
-// an occasional out-of-range i/j/k without crashing (it printed a warning
-// but didn't clamp). We clamp explicitly and keep the warning.
+// reading out of bounds. An occasional out-of-range i/j/k is possible, so the
+// index is clamped explicitly and a warning is printed.
 int clamp_index(int v, int lo, int hi, const char* name) {
     if (v < lo || v > hi) {
         std::cerr << "[kiwi] warning: gridded_integral index " << name << "=" << v
@@ -251,8 +247,8 @@ WallIntegralConstants compute_wall_constants(double h, double r0) {
 
 // Tier 2 (once per edge): the D2/D3 region-matching constants -- the
 // "phi1 business"/"phi2 business" blocks, functions of r0, R_0 and h only
-// (never the caller's per-vertex phi). Reproduces the original's R_0==0 ->
-// 0 guard via `valid`.
+// (never the caller's per-vertex phi). The R_0==0 -> 0 guard is carried by
+// `valid`.
 EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& w, double R_0) {
     EdgeIntegralConstants e;
     e.R_0 = R_0;
@@ -342,10 +338,10 @@ EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& w, dou
         I_3 = I_1 + a * (1. + a2) / 4. * (2 * u / (1 - u * u) + logs);
         I_5 = I_3 + a * (1. + a2) * (1. + a2) / 16. * ((10 * u - 6 * u * u * u) / (1 - u * u) / (1 - u * u) + 3. * logs);
 
-        // D2 stays 0.0 here, same as the original: this branch never sets it.
+        // D2 stays 0.0 here: this branch never sets it.
         D3 = 1. / 3. * I_2 - 0.25 * (r0 / h) * I_3 + 3. / 40. * r0h2 * I_4 - 1. / 120. * r0h3 * I_5 + 4. / 15. * r0h_3 * I1 + (B2 - B3) / r03 * I0 + D2;
     }
-    // else linedist2 > 4h2: D2 = D3 = 0.0, same as the original's defaults.
+    // else linedist2 > 4h2: D2 = D3 = 0.0 (the defaults).
 
     e.D2 = D2;
     e.D3 = D3;
@@ -354,8 +350,8 @@ EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& w, dou
 
 // Tier 3 (once per vertex -- twice per edge, at phi1 and phi2): the only
 // part of the computation that actually depends on the caller's phi.
-// Reproduces the original's phi==0 -> 0 guard, and returns 0 if the wall or
-// edge were invalid (r0==0 or R_0==0), matching full_integral_new() exactly.
+// Returns 0 for phi==0, and if the wall or edge were invalid (r0==0 or
+// R_0==0), matching full_integral_new() exactly.
 double vertex_integral(const WallIntegralConstants& w, const EdgeIntegralConstants& e, double phi) {
     if (!w.valid || !e.valid) return 0.0;
     if (phi == 0.0) return 0.0;
@@ -402,7 +398,7 @@ double vertex_integral(const WallIntegralConstants& w, const EdgeIntegralConstan
     return full_int;
 }
 
-// Direct port of the legacy full_integral_new(), the analytic closed-form
+// full_integral_new(): the analytic closed-form
 // SPH cubic-spline kernel line integral that gridded_integral() above
 // approximates via table lookup. Now a thin wrapper over the three tiers
 // above -- kept for spot-checking/API compatibility, and always does the

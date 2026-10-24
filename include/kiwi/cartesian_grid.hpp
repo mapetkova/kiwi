@@ -1,12 +1,11 @@
-// sph-to-grid: a from-scratch, independent SPH -> Cartesian grid
-// mapping path -- computed directly, without going through voro++,
-// point_set, tessellation, or the existing mapping stage at all. Unlike
-// cartesian-map (cartesian_map.hpp), which is a *resample* of the Voronoi
-// pipeline's own already-computed output, for visualization convenience,
-// this is a wholly separate, efficient
-// computation of density and mass-weighted velocity straight onto a
-// regular Cartesian grid -- no buffer, no Lloyd relaxation, no Voronoi
-// tessellation anywhere in the path.
+// sph-to-grid: an independent SPH -> Cartesian grid mapping path --
+// computed directly, without going through voro++, point_set, tessellation,
+// or the Voronoi mapping stage at all. Unlike cartesian-map
+// (cartesian_map.hpp), which is a *resample* of the Voronoi pipeline's own
+// already-computed output, for visualization convenience, this computes
+// density and mass-weighted velocity straight onto a regular Cartesian
+// grid -- no buffer, no Lloyd relaxation, no Voronoi tessellation anywhere
+// in the path.
 //
 // Modeled directly on SPLASH's interpolate3D.f90 (github.com/danieljprice/
 // splash, "exact_rendering" branch -- Petkova, Laibe & Bonnell 2018, J.
@@ -26,7 +25,7 @@
 //    contribution rather than being explicitly excluded.
 //
 //  - Each reachable cell's exact kernel-overlap integral is evaluated with
-//    this codebase's own already-validated kernel-integral machinery
+//    KIWI's kernel-integral machinery
 //    (kernel_integral.hpp's compute_face_integral(), compute_wall_constants(),
 //    compute_edge_constants(), vertex_integral()) -- unchanged math, just
 //    applied to a cell's 6 fixed 4-corner axis-aligned rectangular faces
@@ -36,13 +35,12 @@
 //    generalized to an arbitrary polygon -- see compute_face_integral()'s
 //    own doc comment for the winding convention this relies on.
 //
-// Output is a placeholder for now, this
-// reuses cartesian_map.hpp's existing self-describing binary format (minus
-// the voronoi_cell_id field, which doesn't apply here -- there is no
-// Voronoi cell in this path at all) purely to get a real, runnable,
-// inspectable artifact end-to-end. Neither the POLARIS-native Cartesian
-// grid format nor the plain self-describing ASCII writer
-// have been designed yet -- both are deliberately deferred to a later step.
+// The output format is a placeholder: it is modelled on cartesian_map.hpp's
+// self-describing binary format (without the voronoi_cell_id field, which
+// doesn't apply here -- there is no Voronoi cell in this path) so that there
+// is a runnable, inspectable artifact end-to-end. A POLARIS-native Cartesian
+// grid format and a plain self-describing ASCII writer have not been
+// designed yet.
 #pragma once
 
 #include <string>
@@ -95,11 +93,8 @@ CartesianGridResult run_sph_to_grid_stage(const Config& cfg);
 // CartesianGridResult's own doc comment for the exact index formula).
 // Placeholder -- see this file's header comment; not the real POLARIS
 // Cartesian output nor the plain self-describing ASCII format, both still
-// to be designed. Bumped from v1 ("VGTCGRD1", a single int32 resolution
-// instead of 3) when per-axis resolution was added -- v1 files are not
-// readable by this version's loader (this format has never been used for
-// anything but scratch validation runs so far, so no back-compat loader was
-// worth keeping).
+// to be designed. Older "VGTCGRD1" files (a single int32 resolution) are
+// not readable by this loader.
 void save_cartesian_grid(const CartesianGridResult& result, const std::string& path);
 CartesianGridResult load_cartesian_grid(const std::string& path);
 

@@ -15,8 +15,9 @@ namespace kiwi {
 namespace {
 
 // POLARIS GRID data-quantity IDs, fixed order: [gas temperature, vx, vy, vz,
-// gas density]. Not derived from anything -- these are the exact values
-// grid-file.cc wrote, treated as opaque POLARIS-internal constants. See
+// gas density]. Not derived from anything -- these are the values the
+// target POLARIS setup expects, treated as opaque POLARIS-internal
+// constants. See
 // config.hpp's PolarisWriterConfig comment for why these aren't config yet.
 constexpr unsigned short kParams = 5;
 constexpr unsigned short kPlist[kParams] = {3, 7, 8, 9, 28};
@@ -37,10 +38,9 @@ PolarisWriteStats write_polaris_grid(const Config& cfg) {
     for (const auto& m : mapping.cells) mapping_by_id[m.id] = &m;
 
     // Cells actually written: every tessellated cell that also has mapping
-    // data, in ascending id order. Legacy grid-file.cc wrote in this same
-    // order (it walked original particle ids 1..cells ascending), which is
-    // what lets us validate this writer's geometry against grid-buff-iter-5
-    // .dat row-for-row.
+    // data, in ascending id order (i.e. the order of the original particle
+    // ids), so rows can be compared one-to-one with a grid written from the
+    // same particles.
     std::vector<const CellGeometry*> ordered;
     ordered.reserve(tess.cells.size());
     for (const auto& c : tess.cells) {
@@ -54,10 +54,9 @@ PolarisWriteStats write_polaris_grid(const Config& cfg) {
     stats.missing_cells = tess.cells.size() - ordered.size();
 
     // Explicit id -> output-row-index map, built from the cells we're
-    // actually about to write. This replaces the legacy `nid = id - 1`
-    // assumption (only valid when every id in [1, max_id] produced a cell,
-    // i.e. no gaps) with a mapping that's correct even when some cells are
-    // missing.
+    // actually about to write. Assuming row = id - 1 would only be valid when
+    // every id in [1, max_id] produced a cell (no gaps); this mapping stays
+    // correct even when some cells are missing.
     std::unordered_map<int, int> row_of_id;
     row_of_id.reserve(ordered.size() * 2);
     for (size_t row = 0; row < ordered.size(); ++row) {
@@ -74,12 +73,11 @@ PolarisWriteStats write_polaris_grid(const Config& cfg) {
     // stores a single scalar max_len in the header and treats the domain as
     // a CUBE spanning [-0.5*max_len, +0.5*max_len] on all three axes -- not
     // a convention of ours, baked into POLARIS itself. `len` below is
-    // derived from the x-extent alone (matching legacy grid-file.cc), which
+    // derived from the x-extent alone, which
     // is only correct if the y/z extents equal it too. A non-cubic domain
     // here would silently write a `len` that doesn't match the actual y/z
     // extent, producing a wrong grid with no error -- warn, don't block,
-    // same pattern as the OpenMP-not-found/manifest-mismatch cases elsewhere
-    // in this tool.
+    // same pattern as the OpenMP-not-found/manifest-mismatch cases elsewhere.
     {
         const double dx = d.x_max - d.x_min;
         const double dy = d.y_max - d.y_min;

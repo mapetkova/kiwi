@@ -33,7 +33,7 @@ struct Domain {
 // spatial hash for a DOMAIN-UNIFORM particle density (its optimal_particles
 // constant targets ~5.6 points/block on average) -- and completely ignores
 // whatever nx/ny/nz values are passed to it (ilscale is derived purely from
-// total_particles() and domain volume; see pre_container.cc). This tool's
+// total_particles() and domain volume; see pre_container.cc). KIWI's
 // point sets are usually NOT domain-uniform: a real SPH cloud (often
 // clumpy/filamentary) plus, when buffer.enabled, a much sparser buffer
 // lattice filling the rest of the domain. guess_optimal()'s domain-average
@@ -42,13 +42,13 @@ struct Domain {
 //
 // block_scale_factor multiplies guess_optimal()'s own nx/ny/nz by this
 // factor (rounded, clamped to >= 1) before the container is built. 1.0
-// reproduces the exact prior behavior -- block count only changes voro++'s
+// keeps guess_optimal()'s own sizing -- block count only changes voro++'s
 // internal search granularity, never which cells/volumes/neighbors it
 // finds, so this can never change output values, only speed.
 //
-// Benchmarked (bench_grid_blocks, tools/) on two real datasets -- 140,955
-// points (hdens-00282, coverage_grid buffer + Lloyd) and 448,619 points
-// (tidal-00147, legacy buffer + Lloyd, the historically-validated dataset):
+// Benchmarked (bench_grid_blocks, tools/) on two real point sets -- 140,955
+// points (coverage_grid buffer + Lloyd) and 448,619 points (graded_shells buffer +
+// Lloyd):
 // tessellation time as a function of scale forms a clear U-shape, with
 // guess_optimal's own choice (scale=1.0) 2-3.5x SLOWER than the minimum,
 // which fell consistently in the 2.5-3.5x-finer range on both datasets
@@ -61,13 +61,13 @@ struct GridBlocks {
     double block_scale_factor = 3.0;
 };
 
-// The legacy "brick" buffer strategy places three nested shells of
-// synthetic points around the y-min/y-max faces of the domain, offset from
-// a smaller inner region defined by (dx, dy, dz). It reproduces exactly
-// what add-buffer-cells.py did, and exists so we can validate against the
-// historical brick-coords-buff.dat files bit-for-bit. It is NOT a generic
-// strategy -- see BufferConfig::strategy for the general alternative.
-struct LegacyBrickBufferParams {
+// The graded-shells buffer strategy places three nested shells of synthetic
+// points around the faces of the domain, with spacing growing outward
+// (shell_spacing_1/2/3), offset from a smaller inner region defined by
+// (dx, dy, dz). It was written for one specific slab-shaped cloud geometry
+// and is NOT a generic strategy -- see BufferConfig::strategy for the general
+// alternative.
+struct GradedShellsBufferParams {
     double dx = 0, dy = 0, dz = 0;
     double shell_spacing_1 = 3.0; // first two shells use this spacing
     double shell_spacing_2 = 4.0;
@@ -89,10 +89,10 @@ struct CoverageGridBufferParams {
 
 struct BufferConfig {
     bool enabled = false;
-    // "legacy_brick": exact port of add-buffer-cells.py (needs legacy_brick params)
+    // "graded_shells": three nested shells of growing spacing, for one specific slab-shaped cloud geometry (needs graded_shells params)
     // "coverage_grid": generic particle-coverage-based buffer (needs coverage_grid params)
-    std::string strategy = "legacy_brick";
-    LegacyBrickBufferParams legacy_brick;
+    std::string strategy = "coverage_grid";
+    GradedShellsBufferParams graded_shells;
     CoverageGridBufferParams coverage_grid;
 };
 
@@ -120,18 +120,15 @@ struct DiagnosticsConfig {
     std::string python_executable = "python3";
 };
 
-// Stage 4: density + mass-weighted velocity mapping. Deliberately minimal --
-// smoothing (the legacy issmooth/smoothfact knobs) was confirmed an obsolete
-// artefact and dropped entirely, not just defaulted off, so there is nothing
-// to configure for it.
+// Stage 4: density + mass-weighted velocity mapping. Deliberately minimal:
+// there is no smoothing step to configure.
 //
 // use_tabulated_integral selects which form of the SPH kernel line integral
 // (see kernel_integral.hpp) computes density/velocity: false (the default)
 // uses full_integral_new(), the analytic closed-form "ground truth"; true
 // uses gridded_integral(), a fast trilinear-interpolated approximation of
-// it, normally reading its lookup table from density_table (e.g.
-// "density-map-grid-250-300-300.dat") -- every historically-correct
-// legacy-tool run used this tabulated path exclusively. If density_table is
+// it, normally reading its lookup table from density_table (a precomputed
+// table file). If density_table is
 // left unset, or points at a file that isn't actually there,
 // run_mapping_stage() generates the same canonical table in memory instead
 // of failing (see generate_density_table() in kernel_integral.hpp/cpp) --
@@ -143,18 +140,16 @@ struct MappingConfig {
 };
 
 // Stage 5a: POLARIS binary grid writer (EXPERIMENTAL: fixed quantity list, interface may change).
-// Reproduces the exact format
-// grid-file.cc wrote (header: sim/params/plist/cells_d/len; per cell:
-// position, volume, [gas temperature, vx, vy, vz, density], neighbor list --
-// see writer_polaris.cpp for the byte layout). That format bakes in a fixed
-// set of unit-conversion scale factors and a uniform gas temperature rather
-// than deriving them, so they're exposed here as config rather than
-// hardcoded -- but default to the exact values that produced the
-// historically-validated grids, so an unmodified config reproduces them.
+// Writes POLARIS's Voronoi grid file (header: sim/params/plist/cells_d/len;
+// per cell: position, volume, [gas temperature, vx, vy, vz, density],
+// neighbor list -- see writer_polaris.cpp for the byte layout). The file
+// stores SI quantities, so unit-conversion scale factors and a uniform gas
+// temperature are config; the defaults convert pc, km/s and Msun/pc^3 to SI
+// and use 65 K.
 //
 // sim_id/plist (the 5 POLARIS GRID data-quantity IDs, in fixed order:
 // [gas temperature, vx, vy, vz, gas density]) are NOT configurable yet --
-// this writer targets exactly the quantity set POLARIS.txt's setup expects.
+// this writer targets exactly the quantity set one particular POLARIS setup expects.
 // A fully generic quantity list is natural future work once there's a
 // second use case (different species, different fixed fields) to design it
 // against.
@@ -172,14 +167,12 @@ struct PolarisWriterConfig {
 // simple-to-visualize output, NOT part of the pipeline's data contract. See
 // cartesian_map.hpp for the algorithm: for each Cartesian grid-cell center,
 // find the enclosing Voronoi cell via voro++'s own nearest-site search and
-// copy that cell's density/velocity across. Direct port of the approach in
-// the original grid-3d-cartesian-map.cc.
+// copy that cell's density/velocity across.
 //
 // resolution is cells per axis (the domain must be a cube, same requirement
-// write_polaris_grid() already has) -- the ~500 legacy default is a lot of
-// lookups (500^3 = 125M); this tool defaults lower (128) and leaves it
-// tunable so a quick look and a final high-res pass are both cheap to ask
-// for.
+// write_polaris_grid() already has). The default is 128; it is a config
+// field so that a quick look and a final high-resolution pass are both
+// cheap to ask for (500^3 = 125M lookups is a lot).
 struct CartesianMapConfig {
     int resolution = 128;
 };
@@ -201,17 +194,16 @@ struct CartesianMapConfig {
 // CartesianMapConfig::resolution.
 //
 // resolution_x/resolution_y/resolution_z: optional per-axis overrides (0 =
-// unset, falls back to `resolution` for that axis). Added specifically so a
-// non-cube domain can still be given cube -- or at least deliberately
-// chosen -- cells by picking per-axis counts that match the domain's own
-// aspect ratio, and so this tool's own grid can be made to line up
-// EXACTLY, cell-for-cell, with an external tool's differently-shaped grid
-// (e.g. SPLASH's `splash to grid`, which routinely picks a different nx/ny/nz
-// per axis to keep voxels roughly cubic on a non-cube domain) for a direct
-// cross-check -- see run_sph_to_grid_stage()'s cell-shape warning, which now
-// checks the actual resolved cell dimensions (dpx/dpy/dpz) rather than the
-// domain's own shape, since per-axis resolution can make cells cubes even on
-// a non-cube domain.
+// unset, falls back to `resolution` for that axis). They let a non-cube
+// domain be given cube -- or at least deliberately chosen -- cells by
+// picking per-axis counts that match the domain's own aspect ratio, and let
+// the grid line up EXACTLY, cell-for-cell, with an external tool's
+// differently-shaped grid (e.g. SPLASH's `splash to grid`, which routinely
+// picks a different nx/ny/nz per axis to keep voxels roughly cubic on a
+// non-cube domain) for a direct cross-check. run_sph_to_grid_stage()'s
+// cell-shape warning checks the actual resolved cell dimensions (dpx/dpy/dpz)
+// rather than the domain's own shape, since per-axis resolution can make
+// cells cubes even on a non-cube domain.
 //
 // use_tabulated_integral / density_table: same semantics as MappingConfig's
 // fields of the same name (see kernel_integral.hpp) -- false (the default)

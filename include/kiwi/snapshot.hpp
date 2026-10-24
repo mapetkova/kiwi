@@ -10,10 +10,9 @@
 //     x  y  z  vx  vy  vz  m  h  rho
 //   (m is constant across particles for an equal-mass SPH run; h is the
 //   smoothing length; rho is density.) Particle id is the 1-based row
-//   number -- there is no explicit id column, and every other file in the
-//   legacy pipeline (tabulated density/velocity) is implicitly aligned to
-//   this same row order, so we preserve that convention rather than
-//   inventing IDs.
+//   number -- there is no explicit id column, and the per-cell stage outputs
+//   are aligned to this same row order, so that convention is kept rather
+//   than inventing IDs.
 //
 //   "splash_ascii": output of `splash to ascii` (see the SPLASH repo,
 //   github.com/danieljprice/splash). A commented preamble (a signature
