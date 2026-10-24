@@ -159,10 +159,19 @@ int run_manifest(const std::string& config_path) {
 
 } // namespace
 
+#ifndef KIWI_VERSION
+#error "KIWI_VERSION must be defined by the build -- see CMakeLists.txt"
+#endif
+
 int main(int argc, char** argv) {
+    if (argc == 2 && (std::string(argv[1]) == "--version" || std::string(argv[1]) == "-V")) {
+        std::cout << "kiwi " << KIWI_VERSION << "\n";
+        return 0;
+    }
     if (argc != 3) {
         std::cerr << "usage: kiwi <point-set|tessellate|map|write-polaris|write-voronoi|"
-                     "cartesian-map|sph-to-grid|inverse-mapping-test|manifest> <config.json>\n";
+                     "cartesian-map|sph-to-grid|inverse-mapping-test|manifest> <config.json>\n"
+                     "       kiwi --version\n";
         return 1;
     }
     std::string stage = argv[1];

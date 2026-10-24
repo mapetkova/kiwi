@@ -72,8 +72,33 @@ Each stage runs the stages before it if their output is missing:
 | `kiwi manifest <cfg>` | Write `manifest.json` recording the settings behind each output | `manifest.json` |
 
 The output of `sph-to-grid` is currently in KIWI's own simple binary format, which is still a
-placeholder, and `tools/plot_cartesian_map.py` cannot read it yet. `tools/plot_cartesian_map.py`
-plots the `cartesian-map` output.
+placeholder. `tools/plot_cartesian_map.py` plots both it and the `cartesian-map` output (slices or
+projections of density and velocity). `kiwi --version` prints the version.
+
+## Worked example
+
+`configs/example-cutout.json` maps a small real snapshot onto a Cartesian grid. The snapshot,
+`tests/data/brick_03927_cutout.ascii`, is a 2 x 2 pc column cut out of a Phantom simulation (7300 gas
+particles), and the config's domain is exactly that column:
+
+```
+build/kiwi sph-to-grid configs/example-cutout.json
+```
+
+It takes about half a minute on one core (less with OpenMP) and writes
+`runs/brick_03927_cutout/cartesian_grid.dat`, a 50 x 50 x 205 grid of density and velocity. Plot the
+column density along z with (needs `numpy` and `matplotlib`):
+
+```
+python3 tools/plot_cartesian_map.py runs/brick_03927_cutout/cartesian_grid.dat \
+    --axis z --mode projection --log --out column-density.png
+```
+
+![Column density of the example cutout, projected along z](docs/example-column-density-xy.png)
+
+The grid covers only the cutout, but particles near its edges have smoothing kernels that extend past
+it, so the total mass on this grid is not the particle mass. For a mass-conserving map, pad the domain by the
+largest kernel support around the particles, as `tests/real_data_test.py` does.
 
 ## Minimal config
 
@@ -237,7 +262,8 @@ The test data is generated on the fly, so nothing needs downloading.
 
 ## Citation
 
-If you use KIWI, please cite the two papers behind its mapping methods:
+If you use KIWI, please cite the two papers behind its mapping methods, and the thesis if you use a kernel
+other than the cubic spline:
 
 - Petkova, M. A., Laibe, G., Bonnell, I. A., 2018, *Fast and accurate Voronoi density gridding from
   Lagrangian hydrodynamics data*, Journal of Computational Physics, 353, 300.
@@ -246,6 +272,10 @@ If you use KIWI, please cite the two papers behind its mapping methods:
   ionizing feedback with smoothed particle hydrodynamics and Monte Carlo radiative transfer on a
   Voronoi grid*, MNRAS, 507, 858.
   [doi:10.1093/mnras/stab2178](https://doi.org/10.1093/mnras/stab2178)
+- Petkova, M. A., 2018, *Cloudy with a chance of starlight: coupling of smoothed particle hydrodynamics and
+  Monte Carlo radiative transfer for the study of ionising stellar feedback*, PhD thesis, University of St
+  Andrews. [hdl:10023/16557](http://hdl.handle.net/10023/16557). The kernel-integral coefficients for the
+  quartic, quintic and Wendland kernels were published only there (appendix A).
 
 GitHub's "Cite this repository" button uses `CITATION.cff`.
 

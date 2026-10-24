@@ -18,6 +18,7 @@
 #                         needs that legacy file and is not run here.
 #   bad_input             malformed configs and snapshots must give a one-line `[kiwi] error` and exit 1
 #                         (bad_input_test.py).
+#   version_consistent    `kiwi --version` equals the version in CITATION.cff.
 #   kernel_tables         derived kernel-integral coefficient tables vs brute-force quadrature
 #                         (tools/kernel_tables). Needs python3 (standard library only).
 
@@ -41,6 +42,9 @@ if(Python3_FOUND)
   add_test(NAME bad_input
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/bad_input_test.py
                    $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/bad_input_work)
+  add_test(NAME version_consistent
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version_consistent_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_SOURCE_DIR}/CITATION.cff)
   add_test(NAME kernel_tables
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/verify.py 4)
   # Real simulation snapshot (tests/data, not tracked by git); skipped (exit 77) when it is not there.

@@ -1,0 +1,11 @@
+{
+  "run_name": "example-cutout",
+  "domain": {
+    "x_min": -36.0, "x_max": -34.0,
+    "y_min": -60.0, "y_max": -58.0,
+    "z_min": 1.4, "z_max": 9.6
+  },
+  "input_snapshot": "tests/data/brick_03927_cutout.ascii",
+  "work_folder": "runs",
+  "cartesian_grid": {"resolution_x": 50, "resolution_y": 50, "resolution_z": 205}
+}

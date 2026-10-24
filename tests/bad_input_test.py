@@ -11,6 +11,7 @@ Exit code 0 on success, 1 on any failure (this is what ctest looks at).
 import copy
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -116,6 +117,10 @@ def main():
     print("command line")
     r = run([])
     check("no arguments: usage, exit 1", r.returncode == 1 and "usage" in r.stderr)
+    for flag in ("--version", "-V"):
+        r = run([flag])
+        check(f"{flag}: prints `kiwi <version>`, exit 0",
+              r.returncode == 0 and re.fullmatch(r"kiwi \d+\.\d+\.\d+\S*\n", r.stdout) is not None, r.stdout.strip())
     write("good.json", json.dumps(cfg()))
     r = run(["no-such-stage", "good.json"])
     check("unknown stage: exit 1", r.returncode == 1 and "unknown stage" in r.stderr)

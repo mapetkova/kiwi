@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(kiwi CXX)
+project(kiwi VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -51,6 +51,8 @@ target_link_libraries(kiwi_core PUBLIC voro_static)
 # absolute path regardless of the executable's cwd (e.g. running ./kiwi from
 # inside build/, as the README's examples do).
 target_compile_definitions(kiwi_core PUBLIC KIWI_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+# `kiwi --version`; keep in step with CITATION.cff (checked by the `version_consistent` test).
+target_compile_definitions(kiwi_core PUBLIC KIWI_VERSION="${PROJECT_VERSION}")
 if(OpenMP_CXX_FOUND)
   target_link_libraries(kiwi_core PUBLIC OpenMP::OpenMP_CXX)
 else()

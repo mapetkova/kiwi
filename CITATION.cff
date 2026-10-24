@@ -2,6 +2,7 @@ cff-version: 1.2.0
 message: "If you use KIWI, please cite the two papers listed under references."
 title: "KIWI: Kernel-Integral Weighted Interpolation"
 type: software
+version: 0.1.0
 authors:
   - family-names: Petkova
     given-names: "Maya A."
@@ -34,3 +35,13 @@ references:
     end: 878
     year: 2021
     doi: "10.1093/mnras/stab2178"
+  - type: thesis
+    title: "Cloudy with a chance of starlight: coupling of smoothed particle hydrodynamics and Monte Carlo radiative transfer for the study of ionising stellar feedback"
+    authors:
+      - {family-names: Petkova, given-names: "Maya A."}
+    thesis-type: "PhD thesis"
+    institution:
+      name: "University of St Andrews"
+    year: 2018
+    url: "http://hdl.handle.net/10023/16557"
+    notes: "Source of the kernel-integral coefficients for the quartic, quintic and Wendland kernels (appendix A); please cite it if you use those kernels."
