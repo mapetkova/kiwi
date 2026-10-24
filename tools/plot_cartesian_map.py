@@ -24,6 +24,9 @@ Two display modes (--mode, default "slice"):
 Units: the labels assume KIWI's convention for splash_ascii and phantom_binary snapshots (lengths in pc, density in
 Msun pc^-3, column density in Msun pc^-2, velocity in km/s); pass --no-units if your data are in other units.
 
+Low-density cells: in a velocity map, cells with density below --min-density-frac times the maximum (default
+1e-9) are left blank (slice) or excluded from the average (projection), because their velocity is noise.
+
 Colormap: defaults to 'coolwarm' (diverging, reads naturally around zero)
 for --field {vx,vy,vz}, and matplotlib's own default ('viridis') for
 density. Override either with --cmap.
@@ -127,6 +130,10 @@ def main():
     ap.add_argument("--vmax", type=float, default=None,
                      help="colorbar upper bound (default: auto-scaled from the plotted data). "
                           "Applied after --log if both are given.")
+    ap.add_argument("--min-density-frac", type=float, default=1e-9,
+                     help="velocity fields only: ignore cells whose density is below this fraction of the "
+                          "maximum density (default 1e-9; 0 keeps every cell). There the velocity is a "
+                          "mass-weighted average of far kernel tails and is numerical noise.")
     ap.add_argument("--no-units", action="store_true",
                      help="leave units out of the labels. By default the axes are labelled in pc, density "
                           "in Msun pc^-3 (column density in Msun pc^-2) and velocity in km/s, KIWI's "
@@ -155,6 +162,9 @@ def main():
 
     field_by_name = {"density": density, "vx": vx, "vy": vy, "vz": vz}
     field = field_by_name[args.field]
+    valid = density > args.min_density_frac * density.max()  # cells whose velocity is meaningful
+    if args.field != "density":
+        field = np.where(valid, field, np.nan)
 
     axis_idx = {"x": 0, "y": 1, "z": 2}[args.axis]
     n_axis = dims[axis_idx]  # cells along the axis being sliced/projected
@@ -195,8 +205,8 @@ def main():
         if args.field == "density":
             proj_2d = density.sum(axis=axis_idx) * dz
         else:
-            weighted_sum = (density * field).sum(axis=axis_idx)
-            density_sum = density.sum(axis=axis_idx)
+            weighted_sum = np.nansum(density * field, axis=axis_idx)
+            density_sum = (density * valid).sum(axis=axis_idx)
             with np.errstate(divide="ignore", invalid="ignore"):
                 proj_2d = np.where(density_sum > 0, weighted_sum / density_sum, np.nan)
 
