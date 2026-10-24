@@ -21,6 +21,9 @@ Two display modes (--mode, default "slice"):
     component along --axis, i.e. sum(rho*v)/sum(rho) per pixel (nan where a
     column has zero density everywhere).
 
+Units: the labels assume KIWI's convention for splash_ascii and phantom_binary snapshots (lengths in pc, density in
+Msun pc^-3, column density in Msun pc^-2, velocity in km/s); pass --no-units if your data are in other units.
+
 Colormap: defaults to 'coolwarm' (diverging, reads naturally around zero)
 for --field {vx,vy,vz}, and matplotlib's own default ('viridis') for
 density. Override either with --cmap.
@@ -124,6 +127,11 @@ def main():
     ap.add_argument("--vmax", type=float, default=None,
                      help="colorbar upper bound (default: auto-scaled from the plotted data). "
                           "Applied after --log if both are given.")
+    ap.add_argument("--no-units", action="store_true",
+                     help="leave units out of the labels. By default the axes are labelled in pc, density "
+                          "in Msun pc^-3 (column density in Msun pc^-2) and velocity in km/s, KIWI's "
+                          "convention for splash_ascii and phantom_binary snapshots; plain_ascii "
+                          "snapshots are in whatever units you wrote them in.")
     args = ap.parse_args()
 
     if args.vmin is not None and args.vmax is not None and args.vmin >= args.vmax:
@@ -213,10 +221,23 @@ def main():
     fig, ax = plt.subplots(figsize=(7, 6))
     im = ax.imshow(plot_data, origin="lower", extent=extent, aspect="equal", cmap=cmap,
                     vmin=args.vmin, vmax=args.vmax)
+    cbar_label = label
+    if not args.no_units:
+        xlabel, ylabel = f"{xlabel} [pc]", f"{ylabel} [pc]"
+        projected_density = args.mode == "projection" and args.field == "density"
+        if args.field == "density":
+            unit = r"\mathrm{M_\odot\,pc^{-2}}" if projected_density else r"\mathrm{M_\odot\,pc^{-3}}"
+        else:
+            unit = r"\mathrm{km\,s^{-1}}"
+        name = "column density" if projected_density else args.field
+        if args.log and args.field == "density":
+            cbar_label = rf"$\log_{{10}}$({name} / ${unit}$)"
+        else:
+            cbar_label = f"{name} [${unit}$]"
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title.format(label=label))
-    fig.colorbar(im, ax=ax, label=label)
+    fig.colorbar(im, ax=ax, label=cbar_label)
     fig.tight_layout()
 
     if args.out:

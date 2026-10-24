@@ -7,5 +7,5 @@
   },
   "input_snapshot": "tests/data/brick_03927_cutout.ascii",
   "work_folder": "runs",
-  "cartesian_grid": {"resolution_x": 50, "resolution_y": 50, "resolution_z": 205}
+  "cartesian_grid": {"resolution_x": 100, "resolution_y": 100, "resolution_z": 410}
 }

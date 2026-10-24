@@ -85,9 +85,9 @@ particles), and the config's domain is exactly that column:
 build/kiwi sph-to-grid configs/example-cutout.json
 ```
 
-It takes about half a minute on one core (less with OpenMP) and writes
-`runs/brick_03927_cutout/cartesian_grid.dat`, a 50 x 50 x 205 grid of density and velocity. Plot the
-column density along z with (needs `numpy` and `matplotlib`):
+It takes about 3 minutes on one core (less with OpenMP; lower `cartesian_grid.resolution_*` for a quicker, coarser
+map) and writes `runs/brick_03927_cutout/cartesian_grid.dat`, a 100 x 100 x 410 grid of density and velocity (0.02 pc
+cells). Plot the column density along z with (needs `numpy` and `matplotlib`):
 
 ```
 python3 tools/plot_cartesian_map.py runs/brick_03927_cutout/cartesian_grid.dat \
