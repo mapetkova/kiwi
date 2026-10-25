@@ -21,6 +21,9 @@
 #                         (convert_snapshot_test.py).
 #   suggest_config        tools/suggest_config.py on a Phantom dump, via convert-snapshot; skipped without
 #                         numpy (suggest_config_test.py).
+#   inverse_mapping       `kiwi inverse-mapping-test` (experimental) on a synthetic cloud: full coverage in a
+#                         wide domain, partial near walls and none outside, recovered total == grid total
+#                         (inverse_mapping_test.py).
 #   kernel_tables         derived kernel-integral coefficient tables vs brute-force quadrature
 #                         (tools/kernel_tables). Needs python3 (standard library only).
 
@@ -55,6 +58,9 @@ if(Python3_FOUND)
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/suggest_config_test.py
                    $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/suggest_config_work)
   set_tests_properties(suggest_config PROPERTIES SKIP_RETURN_CODE 77)
+  add_test(NAME inverse_mapping
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/inverse_mapping_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/inverse_mapping_work)
   add_test(NAME kernel_tables
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/verify.py 4)
   # Real simulation snapshot (tests/data, not tracked by git); skipped (exit 77) when it is not there.

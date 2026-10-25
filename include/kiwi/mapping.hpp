@@ -39,15 +39,16 @@ MappingResult load_mapping(const std::string& path);
 // exists, it's loaded directly instead of recomputed.
 MappingResult run_mapping_stage(const Config& cfg);
 
-// Optional validation step for a future Voronoi-grid -> SPH-particle inverse
-// mapping, adapted from CMacIonize's Petkova ionic-fraction inverse mapping
+// EXPERIMENTAL: a first step towards mapping a grid (Voronoi or Cartesian)
+// back onto an arbitrary set of particles. It exercises the machinery of
+// that inverse mapping on the one case with a known answer -- recovering
+// each particle's mass from the SAME grid that particle distribution was
+// forward-mapped onto by run_mapping_stage() -- without yet handling a
+// general input and output. It is NOT a grid-agnostic inverse mapping (that
+// needs a second BFS pass; see mapping.cpp). The weighting is adapted from
+// CMacIonize's ionic-fraction inverse mapping
 // (SPHArrayInterface::InverseMappingFunction, SPHARRAY_MAPPING_PETKOVA
-// branch; Petkova et al. 2021) to particle mass instead. Restricted to the
-// "testing step" case: recovering each particle's mass
-// from the SAME grid that particle distribution already forward-mapped onto
-// via run_mapping_stage() -- NOT a grid-agnostic standalone inverse mapping
-// (that needs a second BFS pass; see mapping.cpp for why, and the "second
-// pass" discussion is deliberately deferred to a later, separate feature).
+// branch; Petkova et al. 2021) to particle mass instead.
 //
 // One particle is one row: m_original (from the snapshot), m_recovered (the
 // per-cell-normalized weighted sum defined below), and coverage_fraction =
@@ -59,9 +60,8 @@ MappingResult run_mapping_stage(const Config& cfg);
 // where K_{b,i} is the same normalized SPH kernel wall-integral this file's
 // compute_cell_integral()/compute_face_integral() already evaluates walking
 // outward from particle b (0 if cell i is outside particle b's kernel
-// support). CMacIonize's actual shipped code (not quite what its own paper's
-// eq. 8 states -- see the design discussion this stage grew out of) weights
-// particle a's recovered share of cell i's property P_i by
+// support). CMacIonize's implementation weights particle a's recovered share
+// of cell i's property P_i by
 // weight_{a,i} = K_{a,i} * m_a / M_i, i.e. recovered_a = sum_i weight_{a,i} * P_i.
 // This stage sets P_i = M_i itself (recovering mass from the mass/density
 // grid) -- and M_i then cancels exactly: recovered_a = sum_i K_{a,i} * m_a =
@@ -76,8 +76,8 @@ MappingResult run_mapping_stage(const Config& cfg);
 // (sum_a recovered_a == sum_i M_i exactly, by construction, for any masses)
 // -- just not a check that the forward mapping computed the right density.
 //
-// Requires run_mapping_stage() to have already produced (or caches here
-// trigger it to produce) cfg.stage_path("mapping.dat"); does its own fresh
+// Needs cfg.stage_path("mapping.dat"): it is loaded if present, otherwise
+// run_mapping_stage() produces it first. Does its own fresh
 // voro++ tessellation (geometry isn't persisted between stages) via the same
 // build_cell_geometry() helper run_mapping_stage() uses, and looks up each
 // cell's M_i by its voro++ site id (not by array position) so it never has

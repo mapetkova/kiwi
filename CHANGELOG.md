@@ -32,6 +32,9 @@ First public version (pre-beta).
   default) and `graded_shells` (for one slab-shaped cloud geometry).
 - **Provenance manifest** (`manifest.json`) recording the config and files behind each output, so a changed
   config is reported instead of silently reusing stale cached output.
+- **`inverse-mapping-test`** (experimental): maps the Voronoi grid's cell masses back onto the particles it was
+  built from and reports each particle's recovered mass fraction, as a first step towards mapping a grid onto
+  arbitrary particles.
 - **Plain-text Voronoi grid writer** (`write-voronoi`) and an **experimental POLARIS grid writer**
   (`write-polaris`: fixed quantity list of gas temperature, velocity and density; the interface may change).
 - **`kiwi convert-snapshot`**: write any supported snapshot as `plain_ascii` text.
@@ -39,7 +42,7 @@ First public version (pre-beta).
   three formats, including a zoom assistant; Phantom dumps are read through `kiwi convert-snapshot`), `plot_cartesian_map.py` (slices and projections of either Cartesian output, with units)
   and diagnostic plots.
 - **Tests and CI**: lattice tessellation, generic-kernel, synthetic end-to-end, Phantom-dump, POLARIS
-  writer, bad-input, example-config, version and kernel-table tests, plus a real-data test on a small
+  writer, bad-input, inverse-mapping, example-config, version and kernel-table tests, plus a real-data test on a small
   cutout of a Phantom snapshot (`tests/data/`) and an optional full-snapshot test. GitHub Actions builds
   and tests on Ubuntu and macOS, with an OpenMP thread-count matrix and an ASan/UBSan job.
 - **Documentation**: a worked example (`configs/example-cutout.json`), `CITATION.cff` (the two method
@@ -50,6 +53,8 @@ First public version (pre-beta).
 - The output file of `sph-to-grid` is a placeholder binary format; there is no native ASCII or POLARIS
   writer for it yet.
 - The POLARIS writer's quantity list is fixed.
+- Mapping a grid onto arbitrary particles is not implemented yet; `inverse-mapping-test` only recovers the
+  masses of the particles the grid was built from.
 - `cartesian-map` samples the Voronoi cells at the Cartesian cell centres, so it does not conserve mass
   when the Cartesian cells are larger than the Voronoi cells. The `map` output itself does conserve mass.
 - The full-snapshot test covers `sph-to-grid` only; the Voronoi `map` stage is tested on synthetic data and

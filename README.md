@@ -69,7 +69,7 @@ Each stage runs the stages before it if their output is missing:
 | `kiwi write-voronoi <cfg>` | Plain-text Voronoi grid | `grid-voronoi.txt` |
 | `kiwi write-polaris <cfg>` | Optional, experimental: POLARIS binary grid | `grid-polaris.dat` |
 | `kiwi convert-snapshot <snapshot> <out.txt>` | Write any supported snapshot as `plain_ascii` (gas only; Phantom dumps in pc, M_sun, km/s). Options: `--format`, `--allow-missing-velocity`, `--length-cm`, `--mass-g`, `--velocity-cms` | `<out.txt>` |
-| `kiwi inverse-mapping-test <cfg>` | Validation: map the grid back onto the particles | see log |
+| `kiwi inverse-mapping-test <cfg>` | Experimental validation: map the Voronoi grid back onto its own particles and report each particle's recovered mass fraction | `inverse-mapping-test.dat` |
 | `kiwi manifest <cfg>` | Write `manifest.json` recording the settings behind each output | `manifest.json` |
 
 The output of `sph-to-grid` is currently in KIWI's own simple binary format, which is still a
@@ -215,8 +215,7 @@ Other useful options: `--shift-snapshot` (also write a copy of the snapshot cent
 
 ## Tools
 
-`tools/` holds helper scripts for plotting (`plot_cartesian_map.py`, `plot_diagnostic.py`,
-`plot_h_comparison.py`), the config builder described above (`suggest_config.py`), and a
+`tools/` holds helper scripts for plotting (`plot_cartesian_map.py`, `plot_diagnostic.py`), the config builder described above (`suggest_config.py`), and a
 lattice regression test (`test_lattice_grid.cpp`, built with the project).
 
 ## Tests
@@ -243,6 +242,8 @@ ctest --output-on-failure
   8500 rows, 2.9 MB) cut out of that snapshot. It is tracked in git, so it runs everywhere, including CI.
 - `polaris_writer`: `write-polaris` on a synthetic cloud, decoded back: header, cell volumes, symmetric
   neighbour lists, and temperature/velocity/density against `mapping.dat` with the configured scales.
+- `inverse_mapping`: `inverse-mapping-test` on a synthetic cloud: every particle recovers its own mass in a
+  wide domain, only part of it near the walls and none outside, and the recovered total equals the grid total.
 - `bad_input`: malformed configs and snapshots (missing or empty files, NaN or short rows, unknown kernel or
   format, inverted domain, bad resolution, invalid JSON, ...) must give a one-line `[kiwi] error` and exit 1.
 - `generic_kernel`: the generic kernel integral against the hand-written cubic-spline one and against
@@ -255,6 +256,8 @@ The test data is generated on the fly, so nothing needs downloading.
 
 ## Known limitations
 
+- Mapping a grid (Voronoi or Cartesian) onto an arbitrary set of particles is planned; `inverse-mapping-test`
+  (experimental) is the first step towards it, checking the machinery on the grid's own particles.
 - The POLARIS writer is experimental: the quantity list (gas temperature, velocity, density) is fixed and
   not configurable, it reproduces the grid format of one earlier project, and its interface may change.
 - `sph-to-grid` has no native POLARIS or ASCII writer yet.
