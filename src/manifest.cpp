@@ -122,7 +122,7 @@ nlohmann::json build_manifest(const Config& cfg) {
     inputs["input_snapshot"] = fingerprint_to_json(fingerprint_file(cfg.input_snapshot));
     if (cfg.mapping.use_tabulated_integral && !cfg.mapping.density_table.empty()) {
         // fingerprint_file() already degrades to {"exists": false} rather
-        // than throwing if this path isn't there -- which is now a
+        // than throwing if this path isn't there -- which is a
         // meaningful, non-error state: run_mapping_stage() auto-generates
         // the lookup table in memory in that case (see mapping.cpp) rather
         // than failing, so an "exists": false entry here records that this

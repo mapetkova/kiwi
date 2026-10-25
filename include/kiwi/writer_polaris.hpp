@@ -1,4 +1,4 @@
-// Stage 5a: POLARIS binary grid writer (experimental, see PolarisWriterConfig;
+// POLARIS binary grid writer (experimental, see PolarisWriterConfig;
 // tests/decode_polaris_grid.py documents the byte layout).
 //
 // Neighbor ids are translated through an explicit id -> output-row-index map

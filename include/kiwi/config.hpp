@@ -47,13 +47,12 @@ struct Domain {
 // finds, so this can never change output values, only speed.
 //
 // Benchmarked (bench_grid_blocks, tools/) on two real point sets -- 140,955
-// points (coverage_grid buffer + Lloyd) and 448,619 points (graded_shells buffer +
-// Lloyd):
-// tessellation time as a function of scale forms a clear U-shape, with
-// guess_optimal's own choice (scale=1.0) 2-3.5x SLOWER than the minimum,
-// which fell consistently in the 2.5-3.5x-finer range on both datasets
-// (going further, e.g. 6x, starts getting slower again -- too many
-// near-empty blocks to search). Default here (3.0) sits at or near that
+// points (coverage_grid buffer + Lloyd) and 448,619 points (graded_shells
+// buffer + Lloyd): tessellation time as a function of scale forms a clear
+// U-shape, with guess_optimal's own choice (scale=1.0) 2-3.5x SLOWER than
+// the minimum, which fell consistently in the 2.5-3.5x-finer range on both
+// datasets (going further, e.g. 6x, starts getting slower again -- too many
+// near-empty blocks to search). The default (3.0) sits at or near that
 // minimum on both; re-run bench_grid_blocks against your own data if it
 // looks very different (e.g. much less clumpy) to check whether a different
 // value serves it better.
@@ -111,7 +110,7 @@ struct LloydConfig {
 struct DiagnosticsConfig {
     bool enabled = false;
     // Which python3 to invoke. Defaults to "python3" (resolved via PATH at
-    // run time, same as before this field existed). Override with a full
+    // run time). Override with a full
     // interpreter path (e.g. "/usr/bin/python3" or a venv's
     // ".../bin/python3") if `pip3`/`python3` on PATH turn out to be two
     // different installs -- a real failure mode on macOS, where several
@@ -120,7 +119,7 @@ struct DiagnosticsConfig {
     std::string python_executable = "python3";
 };
 
-// Stage 4: density + mass-weighted velocity mapping. Deliberately minimal:
+// Density + mass-weighted velocity mapping on the Voronoi grid. Deliberately minimal:
 // there is no smoothing step to configure.
 //
 // use_tabulated_integral selects which form of the SPH kernel line integral
@@ -128,9 +127,8 @@ struct DiagnosticsConfig {
 // uses full_integral_new(), the analytic closed-form "ground truth"; true
 // uses gridded_integral(), a fast trilinear-interpolated approximation of
 // it, normally reading its lookup table from density_table (a precomputed
-// table file). If density_table is
-// left unset, or points at a file that isn't actually there,
-// run_mapping_stage() generates the same canonical table in memory instead
+// table file). If density_table is left unset, or points at a file that
+// isn't actually there, run_mapping_stage() generates the same canonical table in memory instead
 // of failing (see generate_density_table() in kernel_integral.hpp/cpp) --
 // so this field is a preference, not a hard requirement, when
 // use_tabulated_integral is true.
@@ -139,7 +137,7 @@ struct MappingConfig {
     std::string density_table; // optional: loaded if set and present, else auto-generated in memory
 };
 
-// Stage 5a: POLARIS binary grid writer (EXPERIMENTAL: fixed quantity list, interface may change).
+// POLARIS binary grid writer (EXPERIMENTAL: fixed quantity list, interface may change).
 // Writes POLARIS's Voronoi grid file (header: sim/params/plist/cells_d/len;
 // per cell: position, volume, [gas temperature, vx, vy, vz, density],
 // neighbor list -- see writer_polaris.cpp for the byte layout). The file
@@ -185,9 +183,8 @@ struct CartesianMapConfig {
 //
 // Deliberately a separate, self-contained knob set from MappingConfig
 // rather than reusing it -- these two mapping paths are meant to stay
-// wholly independent of one another (sph-to-grid is a separate path through
-// the tool, without buffer or Lloyd iterations), so a
-// change to one's config shouldn't have to reason about the other.
+// wholly independent of one another (sph-to-grid has no buffer or Lloyd
+// iterations), so a change to one's config doesn't affect the other.
 //
 // resolution: cells per axis, used for all 3 axes UNLESS overridden below --
 // on a cube domain this gives cube cells directly, same as
@@ -219,7 +216,7 @@ struct CartesianGridConfig {
 };
 
 // Which SPH kernel the snapshot was run with, and therefore which kernel the grid mapping integrates.
-// Everything here is optional; the defaults reproduce the cubic spline (M4) exactly as before.
+// Everything here is optional; the defaults give the cubic spline (M4).
 //
 // name: "cubic_spline" (default), "quartic_spline", "quintic_spline", "wendland_c2", "wendland_c4",
 //   "wendland_c6" (see kernel_spec.hpp for aliases).
@@ -229,7 +226,7 @@ struct CartesianGridConfig {
 //   another convention (e.g. a code whose kernel vanishes at r = h would need 1).
 // hfact: only used when a splash_ascii snapshot lacks either h or density and one is derived from the
 //   other via h = hfact * (m/rho)^(1/3); 0 (default) means Phantom's default for the chosen kernel.
-// generic_path: false (default) runs the cubic spline through its original hand-written, optionally
+// generic_path: false (default) runs the cubic spline through its hand-written, optionally
 //   tabulated integral and every other kernel through the generic analytic one; true forces the
 //   generic analytic path even for the cubic spline (mainly for testing; incompatible with
 //   use_tabulated_integral, which only exists for the cubic spline).
@@ -267,7 +264,8 @@ struct Config {
     // file (see detect_snapshot_format() in snapshot.hpp). "phantom_binary":
     // Phantom's native binary dump, read directly (see phantom_dump.hpp;
     // converted to the units in phantom_units). "plain_ascii":
-    // headerless text, 9 columns per particle (x y z vx vy vz m h rho). "splash_ascii": output of `splash to ascii` (SPLASH repo) --
+    // headerless text, 9 columns per particle (x y z vx vy vz m h rho).
+    // "splash_ascii": output of `splash to ascii` (SPLASH repo) --
     // commented header, then per-particle data whose column count/order is
     // read from the header line itself (not hardcoded -- it varies between
     // files depending on the source Phantom run), non-gas (itype != 1) rows

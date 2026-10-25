@@ -68,12 +68,12 @@ target_include_directories(kiwi PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOUR
 enable_testing()
 add_subdirectory(tests)
 
-# --- permanent standalone tools (shipped, not part of the kiwi CLI itself) ---
+# --- standalone tools (built with the project, not part of the kiwi CLI itself) ---
 add_executable(bench_grid_blocks tools/bench_grid_blocks.cpp)
 target_link_libraries(bench_grid_blocks PRIVATE kiwi_core)
 target_include_directories(bench_grid_blocks PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/third_party)
 
-# Permanent regression test: Voronoi tessellation of a simple cubic lattice
+# Regression test: Voronoi tessellation of a simple cubic lattice
 # is exactly a partition into cubes -- see tools/test_lattice_grid.cpp. Also
 # the ground-truth reference fixture for validating sph-to-grid (the direct
 # SPH -> Cartesian mapping).

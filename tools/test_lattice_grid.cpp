@@ -1,4 +1,4 @@
-// Permanent regression test: a Voronoi tessellation of a simple cubic
+// Regression test: a Voronoi tessellation of a simple cubic
 // lattice of generating points is, exactly, a partition of the domain into
 // cubes -- each cell bounded by the perpendicular bisector planes to its
 // +/-x/+/-y/+/-z neighbors (interior cells) or by the domain wall itself

@@ -1,19 +1,15 @@
-// Standalone particle-only routine for the inverse-mapping standalone tool
-// (see the project progress doc's "Twenty-second delivery" section): sets
-// each particle's smoothing length h by the same self-consistent
-// neighbour-density iteration Phantom uses at every timestep, instead of the
-// algebraic h = hfact*(m/rho)^(1/3) shortcut this project has used so far
+// Standalone particle-only tool: sets each particle's smoothing length h by
+// the same self-consistent neighbour-density iteration Phantom uses at every
+// timestep, instead of the algebraic h = hfact*(m/rho)^(1/3) shortcut
 // (that shortcut trusts an externally supplied rho; this instead asks "what
 // h makes the SPH kernel-weighted density of the particle's ACTUAL local
 // neighbours agree with its own mass/hfact target?", which is what a real
 // SPH code enforces before it ever runs and is far more robust to a locally
 // uneven or stale input rho).
 //
-// NOT wired into the kiwi CLI yet -- deliberately a standalone tool (see
-// tools/bench_grid_blocks.cpp and tools/test_lattice_grid.cpp for the same
-// pattern): this is one of several particle-related routines to build and
-// validate independently before folding them into the standalone
-// inverse-mapping feature.
+// Not part of the kiwi CLI: a standalone tool, like tools/bench_grid_blocks.cpp
+// and tools/test_lattice_grid.cpp. It is a building block for a possible
+// inverse mapping (Voronoi grid -> particles) and no stage uses it yet.
 //
 // --- Algorithm, verified directly against Phantom's actual source
 // (github.com/danieljprice/phantom, module `densityforce` in
@@ -29,12 +25,12 @@
 // length iteration [dens.F90's densityiterate(), maxdensits=100 there].
 //
 // We use the cubic spline (M4) kernel, Phantom's default and the kernel
-// implicit in this codebase's own hfact=1.2 convention:
+// implied by hfact = 1.2:
 //   W(r,h) = cnormk/h^3 * f(q),  q = r/h,  cnormk = 1/pi (3D)  [kernel_cubic.f90]
 //   f(q) = 1 - 1.5q^2 + 0.75q^3         0 <= q < 1
 //        = 0.25*(2-q)^3                 1 <= q < 2
 //        = 0                            q >= 2               [radkern = 2]
-// f is C1 (f'(1-) == f'(1-) == -0.75, f'(2) == 0), so no special-casing is
+// f is C1 (f'(1-) == f'(1+) == -0.75, f'(2) == 0), so no special-casing is
 // needed at the branch boundaries, and W(0,h) and dW/dh(0,h) are both finite
 // (q=0 falls in the first branch), so the self term needs no special case
 // either -- it's just "the particle itself happens to be a neighbour at
@@ -66,8 +62,8 @@
 // reverse-engineer sign conventions out of a heavily inlined Fortran
 // accumulator by inspection alone.
 //
-// The starting guess for each particle's h iteration is this codebase's own
-// existing algebraic estimate, h_seed = hfact*(m/rho_snapshot)^(1/3) (Price
+// The starting guess for each particle's h iteration is the algebraic
+// estimate, h_seed = hfact*(m/rho_snapshot)^(1/3) (Price
 // et al. 2018 eq. 6, the same relation snapshot.hpp already uses when only
 // one of h/rho is present in an input file) -- using the snapshot's own rho
 // column, NOT its own h column, as the seed. This is a reasonable physically-
@@ -79,14 +75,13 @@
 // independence obvious rather than relying on the reader to accept the
 // non-bias argument.
 //
-// The neighbour search itself uses a from-scratch, from-the-ground-up 3D
-// kd-tree (KDTree below) -- built once (particle positions don't move during
+// The neighbour search itself uses a 3D kd-tree (KDTree below) -- built once (particle positions don't move during
 // this iteration), range-queried once per particle per Newton-Raphson step
 // with that step's own compact-support radius radkern*h_i.
 //
 // Usage:
 //   h_from_neighbours <snapshot_path> [format] [hfact] [tolh] [output.dat]
-//     format  -- "auto" (default, sniffed), "plain_ascii", or "splash_ascii"
+//     format  -- "auto" (default, sniffed), "plain_ascii", "splash_ascii" or "phantom_binary"
 //     hfact   -- default 1.2 (Phantom's own default, options.f90 hfact_default)
 //     tolh    -- default 1e-4 (Phantom's own default, options.f90:93)
 //     output  -- default "<snapshot-basename>-h-compare.dat" in the cwd
@@ -317,13 +312,11 @@ HResult solve_h(size_t i, const kiwi::SPHSnapshot& snap, const KDTree& tree, dou
     // h_old -- so on the breaking iteration, `h` is already the post-update
     // value but `rho_sum`/`neighbours` are still from the query at the START
     // of that same iteration (i.e. at h_old, one Newton step behind). Left
-    // alone, that reports a (h, rho) pair that isn't self-consistent -- an
-    // independent brute-force cross-check against a saved output file caught
-    // this (max 2e-4 relative mismatch between the reported rho_computed and
-    // the density actually implied by the reported h_computed, vs. 6e-8 once
-    // this fix is in place -- see the validation notes). One more evaluation
-    // at the final h fixes it, at the cost of one extra neighbour query per
-    // particle.
+    // alone, that would report a (h, rho) pair that isn't self-consistent
+    // (a relative mismatch of up to 2e-4 between the reported rho_computed
+    // and the density implied by the reported h_computed, against 6e-8 with
+    // the extra evaluation below). One more evaluation at the final h fixes
+    // it, at the cost of one extra neighbour query per particle.
     neighbours.clear();
     tree.query_radius(snap.x[i], snap.y[i], snap.z[i], kRadkern * h, neighbours);
     rho_sum = 0.0;

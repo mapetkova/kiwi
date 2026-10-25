@@ -86,12 +86,12 @@ double full_integral_new(double h, double phi, double r0, double R_0);
 // every edge of every visited face -- can hoist the tiers that don't depend
 // on the per-vertex angle phi instead of recomputing them on every call.
 //
-// Per the thesis derivation (Petkova, Ch. 4): the B1/B2/B3 boundary
+// Per the derivation in Petkova (2018, PhD thesis), ch. 4: the B1/B2/B3 boundary
 // constants (eq. 4.64-4.66) are functions of r0 and h alone -- constant
 // across every edge of one wall, since a wall's r0 (perpendicular distance
 // from the particle to the wall's plane) doesn't change edge to edge. The
-// D2/D3 region-matching constants (the "phi1 business"/"phi2 business"
-// blocks, matching continuity at r0=h and r0=2h) are functions of r0, R_0
+// D2/D3 region-matching constants (the blocks that match continuity of
+// the integral across the regions r0<h, h<=r0<2h and r0>=2h) are functions of r0, R_0
 // and h -- constant across the two full_integral_new() calls needed for one
 // edge's two endpoints (phi1 and phi2), since R_0 (perpendicular distance
 // from the particle's projection to that edge's line) is fixed per edge and
@@ -103,9 +103,9 @@ double full_integral_new(double h, double phi, double r0, double R_0);
 // full_integral_new()'s r0==0 -> 0 guard); EdgeIntegralConstants::valid is
 // false iff the wall was invalid or R_0 == 0.0 (matching the R_0==0 -> 0
 // guard). vertex_integral() reproduces the remaining phi==0 -> 0 guard
-// itself. full_integral_new() is now a thin wrapper over these three calls,
+// itself. full_integral_new() is a thin wrapper over these three calls,
 // kept for spot-checking/API compatibility -- it does the full recompute
-// every time, same as before this split existed.
+// on every call.
 struct WallIntegralConstants {
     bool valid = false; // r0 != 0.0
     double r0 = 0.0, h = 0.0;
@@ -165,7 +165,7 @@ double vertex_integral(const WallIntegralConstants& wall, const EdgeIntegralCons
 // box_cell_faces() for the full validation writeup, including an
 // independent end-to-end ground truth this was cross-checked against). The
 // discrepancy against voro++.hh's stated convention isn't fully understood;
-// what's confirmed is the empirical winding cartesian_grid.cpp now uses.
+// what's confirmed is the empirical winding cartesian_grid.cpp uses.
 // Getting a face's winding backward silently flips that face's sign
 // contribution rather than erroring, so any new hand-built-face caller
 // should validate winding against a case with a known answer (e.g. a box

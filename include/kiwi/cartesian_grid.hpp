@@ -15,7 +15,7 @@
 //    possibly reach is computed by plain arithmetic from the particle's
 //    position and smoothing length (kernel support radius 2h), the same way
 //    interpolate3D.f90 computes ipixmin/ipixmax/etc. No neighbor search or
-//    BFS discovery is needed here at all, unlike the existing mapping stage
+//    BFS discovery is needed here at all, unlike the Voronoi mapping stage
 //    (mapping.cpp), which has to discover reachable Voronoi cells one face
 //    at a time because they aren't arranged on a regular lattice -- a
 //    Cartesian grid's neighbor structure is already known in closed form.
@@ -62,8 +62,8 @@ struct CartesianGridResult {
     // Flattened index for (ix, iy, iz), ix in [0,nx), iy in [0,ny), iz in
     // [0,nz), x-major: idx = (ix * ny + iy) * nz + iz -- same layout
     // convention as CartesianMap (cartesian_map.hpp) generalized to
-    // independent per-axis counts (reduces to the old `(ix*res+iy)*res+iz`
-    // when nx==ny==nz==res). Cell (ix,iy,iz)'s center is at
+    // independent per-axis counts (for nx==ny==nz==res it is
+    // `(ix*res+iy)*res+iz`). Cell (ix,iy,iz)'s center is at
     // domain.x_min + (ix+0.5)*dpx, dpx = (domain.x_max-domain.x_min)/nx (and
     // analogously for y/z). NOTE: this is NOT the same element order as
     // SPLASH's own `splash to grid` output files (those are written

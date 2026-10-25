@@ -248,7 +248,7 @@ json Config::to_json() const {
                             {"use_tabulated_integral", cartesian_grid.use_tabulated_integral},
                             {"density_table", cartesian_grid.density_table}};
     // Only written when something differs from the default, so the config (and the provenance manifest
-    // built from it) of a pre-existing cubic-spline run is unchanged by the existence of this section.
+    // built from it) of a default cubic-spline run does not contain this section.
     if (!kernel.is_default()) {
         j["kernel"] = {{"name", kernel.name},
                        {"support_radius_in_h", kernel.support_radius_in_h},

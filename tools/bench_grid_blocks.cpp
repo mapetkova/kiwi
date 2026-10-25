@@ -1,9 +1,9 @@
-// Throwaway benchmark harness for the grid_blocks/guess_optimal() investigation
-// (optimization item (a)). Not part of the kiwi CLI itself.
+// Benchmark harness for the grid_blocks setting (config.hpp, GridBlocks).
+// Not part of the kiwi CLI itself.
 //
 // guess_optimal(nx,ny,nz) (third_party/voro/src/pre_container.cc) completely
-// overwrites whatever nx/ny/nz it's given -- see the header comment in
-// tessellation.cpp/point_set.cpp for the finding. This harness bypasses that to
+// overwrites whatever nx/ny/nz it's given -- see GridBlocks in config.hpp.
+// This harness bypasses that to
 // actually test whether voro++'s own heuristic (a domain-wide average of
 // optimal_particles=5.6 per block, config.hh) is well matched to our workload,
 // which is NOT domain-uniform: a real SPH cloud, often clumpy/filamentary, plus

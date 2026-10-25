@@ -3,8 +3,8 @@
 // Same three-tier structure as WallIntegralConstants / EdgeIntegralConstants / vertex_integral()
 // (wall = once per face, edge = once per edge, vertex = twice per edge), but driven by the
 // coefficient tables in KernelSpec instead of hand-written cubic-spline constants, so it works for
-// every kernel in kernel_spec.hpp.  The cubic-spline fast path in kernel_integral.hpp is untouched
-// and serves as the cross-check for this one (tools/test_generic_kernel.cpp).
+// every kernel in kernel_spec.hpp.  The cubic-spline fast path in kernel_integral.hpp is a separate
+// implementation and serves as the cross-check for this one (tools/test_generic_kernel.cpp).
 //
 // Maths (thesis ch. 4 and appendix A; derivation in tools/kernel_tables/derive.py): the kernel mass
 // of the "vertex pyramid" spanned by the particle, the foot of the perpendicular on the wall plane

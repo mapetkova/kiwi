@@ -1,4 +1,4 @@
-// Stage 4: maps SPH particle density and mass-weighted velocity onto the
+// Maps SPH particle density and mass-weighted velocity onto the
 // final Voronoi grid (post buffer + Lloyd).
 //
 // A single breadth-first walk over the tessellation evaluates the expensive

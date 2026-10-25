@@ -17,8 +17,8 @@ namespace {
 // POLARIS GRID data-quantity IDs, fixed order: [gas temperature, vx, vy, vz,
 // gas density]. Not derived from anything -- these are the values the
 // target POLARIS setup expects, treated as opaque POLARIS-internal
-// constants. See
-// config.hpp's PolarisWriterConfig comment for why these aren't config yet.
+// constants. See config.hpp's PolarisWriterConfig comment for why these
+// aren't config yet.
 constexpr unsigned short kParams = 5;
 constexpr unsigned short kPlist[kParams] = {3, 7, 8, 9, 28};
 

@@ -81,8 +81,7 @@ struct CellFaceGeometry {
 //
 // Not applicable to domain-wall faces (negative neighbor ids, no real cell
 // on the other side) or to a neighbor id that doesn't resolve through
-// reverse_id_list -- those are computed directly every time, same as before
-// this cache existed. Also assumes general position: two Voronoi cells
+// reverse_id_list -- those are computed directly every time. Also assumes general position: two Voronoi cells
 // share at most one face, true for a genuine (non-degenerate) point set,
 // which real SPH particle positions are.
 using FaceCache = std::unordered_map<int64_t, std::pair<int, double>>;
@@ -161,13 +160,11 @@ double compute_cell_integral(
 
         // Extract this face's corners (voro++'s vertex-index indirection,
         // resolved to absolute coordinates) into the plain flattened form
-        // compute_face_integral() takes -- the same per-face math this loop
-        // used to do inline now lives there, shared with cartesian_grid.cpp.
-        // Vertex order is preserved exactly (vertex k of the face, for
-        // k = 0..face_vertex_count-1, same order voro++'s face_vertices()
-        // already produces) -- unchanged from what this loop always fed
-        // into the inline math before the refactor, so whatever convention
-        // voro++'s actual output follows here is undisturbed either way.
+        // compute_face_integral() takes (the per-face math lives there,
+        // shared with cartesian_grid.cpp). Vertex order is preserved exactly
+        // (vertex k of the face, for k = 0..face_vertex_count-1, in the order
+        // voro++'s face_vertices() produces), so whatever winding convention
+        // voro++'s output follows is passed through unchanged.
         std::vector<double> face_verts;
         face_verts.reserve(static_cast<size_t>(face_vertex_count) * 3);
         for (int vi = 0; vi < face_vertex_count; ++vi) {

@@ -239,10 +239,8 @@ def _is_gcm3_unit(raw):
 
 
 def _msun_pc3_to_g_cm3():
-    """g/cm^3 per Msun/pc^3 -- same constants as this project's own
-    SPLASH-comparison scripts (compare_splash.py, investigate_discrepancy.py,
-    verify_h_hypothesis.py) and snapshot.cpp's msun_pc3_to_g_cm3(), kept in
-    one place per language so they can never quietly drift apart."""
+    """g/cm^3 per Msun/pc^3 -- the same constants as snapshot.cpp's
+    msun_pc3_to_g_cm3(); keep the two in step."""
     msun_g = 1.9891e33
     pc_cm = 3.08567758e18
     return msun_g / pc_cm ** 3
@@ -366,14 +364,9 @@ def _load_splash_ascii(path):
     Returns the same dict shape as _load_plain_ascii (x/y/z/vx/vy/vz/m/h/
     rho arrays).
 
-    NOTE: this used to hardcode a fixed 15-column, fixed-order layout (x y
-    z m h rho vx vy vz pressure alpha div_v poten dt itype); an earlier
-    version of that was even missing the `pressure` column entirely, an
-    off-by-one shared independently with this format's C++ reader -- see
-    the "Nineteenth delivery" section of the project progress doc for that
-    story. Both were real bugs; this rewrite (reading column identity from
-    the header rather than assuming it) fixes the whole class, not just
-    that one instance."""
+    Column identity is read from the header, never assumed from a fixed
+    layout (a hard-coded order silently misreads files that have a column
+    more or fewer than expected)."""
     import numpy as np
 
     with open(path) as f:

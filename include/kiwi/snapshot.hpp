@@ -1,5 +1,5 @@
-// Raw SPH snapshot ingestion. This is the real entry point of the pipeline:
-// everything downstream (buffer, Lloyd, tessellation, and eventually the
+// Raw SPH snapshot ingestion. This is the entry point of the pipeline:
+// everything downstream (buffer, Lloyd, tessellation, and the
 // density/velocity mapping stage) starts from what's read here.
 //
 // Three file formats are recognized (the third, "phantom_binary", is Phantom's native binary dump, read
@@ -33,34 +33,30 @@
 //   Only x, y, z, m (particle mass), vx, vy, vz, and at least one of h
 //   (smoothing length) or density are required; anything else present
 //   (pressure, alpha, div_v, poten, dt, or an unrecognized physics-module
-//   column) is read past but not kept -- `pressure` in particular is NOT
-//   needed by anything downstream, even though real files from the
-//   original pipeline carry it. If only one of h/density is present, the other is
-//   derived via h = 1.2*(m/rho)^(1/3) (Price et al. 2018, eq. 6; the sign
-//   matters -- (m/rho)^(-1/3) would be backwards), converting through
-//   Msun/pc^3 first since m/h/density are written in three different unit
-//   systems (M_Sun/pc/g_cm^3) that the relation can't be applied to
-//   directly -- this refuses with a clear error, rather than silently
-//   misconverting, if the header's own unit brackets say anything else.
+//   column) is read past but not kept -- `pressure` in particular is not
+//   needed by anything downstream, even though real files carry it. If only
+//   one of h/density is present, the other is derived via
+//   h = hfact*(m/rho)^(1/3) (Price et al. 2018, eq. 6; hfact = 1.2 for the
+//   cubic spline). The relation needs m, h and rho in one consistent unit
+//   system, but `splash to ascii` writes them in three different ones
+//   (M_Sun, pc, g/cm^3), so the values are converted through Msun/pc^3
+//   first; if the header's own unit brackets say anything else, the reader
+//   refuses with a clear error rather than silently misconverting.
 //   If no `itype` column is present at all, every row is treated as gas
 //   (matching SPLASH's own single-particle-type convention); otherwise
 //   only itype == 1 (gas) rows are kept, and sink/dust/star/etc. rows are
 //   dropped with a warning rather than silently treated as gas. Particle
 //   id is the 1-based row number among the *kept* rows.
 //
-//   (An earlier version of this reader assumed a fixed 15-column layout --
-//   x y z m h rho vx vy vz pressure alpha div_v poten dt itype -- and an
-//   even earlier version of that was missing the `pressure` column
-//   entirely, which silently shifted every field from alpha onward by
-//   one, so itype ended up compared against what was actually the `dt`
-//   column and every real gas particle got dropped as "non-gas": see the
-//   "Nineteenth delivery" section of the project progress doc. Both were
-//   real bugs; reading column identity from the header instead of
-//   assuming it fixes the whole class, not just that one instance.)
+//   Column identity is always read from the header, never assumed from a
+//   fixed layout: a hard-coded column order silently misreads (for example
+//   comparing `itype` against the wrong column and dropping every particle
+//   as "non-gas") as soon as a file has a column more or fewer than expected.
 //
-// "auto" (the default -- see Config::input_snapshot_format) picks between
-// the two by sniffing the file's first line for the SPLASH signature
-// comment; a file with no such first line is assumed to be plain_ascii.
+// "auto" (the default -- see Config::input_snapshot_format) picks the format
+// from the file itself: a Phantom capture-pattern record means
+// phantom_binary; otherwise the first line decides -- the SPLASH signature
+// comment means splash_ascii, anything else is assumed to be plain_ascii.
 #pragma once
 
 #include <string>
@@ -83,8 +79,8 @@ struct SPHSnapshot {
 // Sniffs `path` to tell the formats apart: a Phantom binary dump is recognised by its capture-pattern
 // record, otherwise the first line decides between plain_ascii and splash_ascii.
 // Returns "phantom_binary", "plain_ascii" or "splash_ascii" -- never "auto". Exposed
-// separately from load_sph_snapshot() so callers (and suggest_config.py's
-// Python port of this same rule) can report or act on the detected format
+// separately from load_sph_snapshot() so callers (suggest_config.py has a cheaper
+// version of this rule) can report or act on the detected format
 // before/without loading the whole file.
 std::string detect_snapshot_format(const std::string& path);
 

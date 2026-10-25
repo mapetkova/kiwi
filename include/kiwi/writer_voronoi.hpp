@@ -1,4 +1,4 @@
-// Stage 5b: generic plain-text Voronoi export. Not tied to POLARIS or any
+// Generic plain-text Voronoi export. Not tied to POLARIS or any
 // particular downstream consumer -- one row per cell, human-readable, easy
 // to load with numpy/pandas for a quick look or a custom pipeline.
 //

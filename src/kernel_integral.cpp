@@ -80,8 +80,9 @@ DensityLookupTable generate_density_table() {
 
     // n here is gridding()'s single shared sub-grid size (nR_01 == nR_02 ==
     // nphi1 == nphi2 == 150 in the canonical grid) -- kept as one local to
-    // mirror gridding(), not implying it could differ per axis; if it ever needs to, the four t.nR_0*/t.nphi* fields above
-    // already carry the real (currently-equal) values independently.
+    // mirror gridding(), not implying it could differ per axis; if it ever
+    // needs to, the four t.nR_0*/t.nphi* fields above already carry the real
+    // (currently-equal) values independently.
     const int n = t.nR_01;
 
     for (int i = 1; i <= t.nr0; ++i) {
@@ -245,10 +246,10 @@ WallIntegralConstants compute_wall_constants(double h, double r0) {
     return w;
 }
 
-// Tier 2 (once per edge): the D2/D3 region-matching constants -- the
-// "phi1 business"/"phi2 business" blocks, functions of r0, R_0 and h only
-// (never the caller's per-vertex phi). The R_0==0 -> 0 guard is carried by
-// `valid`.
+// Tier 2 (once per edge): the D2/D3 region-matching constants (built from
+// the vertex angles phi1 and phi2 where the vertex radius reaches h and 2h),
+// functions of r0, R_0 and h only (never the caller's per-vertex phi). The
+// R_0==0 -> 0 guard is carried by `valid`.
 EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& w, double R_0) {
     EdgeIntegralConstants e;
     e.R_0 = R_0;
@@ -271,7 +272,7 @@ EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& w, dou
     double linedist2 = r0 * r0 + R_0 * R_0;
 
     if (linedist2 <= h2) {
-        ////// phi1 business /////
+        // phi1: the vertex angle where the vertex radius reaches h
         phi1 = acos(R_0 / sqrt(h * h - r0 * r0));
 
         sincos_local(phi1, sinp, cosp);
@@ -294,7 +295,7 @@ EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& w, dou
 
         D2 = -1. / 6. * I_2 + 0.25 * (r0 / h) * I_3 - 0.15 * r0h2 * I_4 + 1. / 30. * r0h3 * I_5 - 1. / 60. * r0h_3 * I1 + (B1 - B2) / r03 * I0;
 
-        ////// phi2 business /////
+        // phi2: the vertex angle where the vertex radius reaches 2h
         phi2 = acos(R_0 / sqrt(4.0 * h * h - r0 * r0));
 
         sincos_local(phi2, sinp, cosp);
@@ -317,7 +318,7 @@ EdgeIntegralConstants compute_edge_constants(const WallIntegralConstants& w, dou
 
         D3 = 1. / 3. * I_2 - 0.25 * (r0 / h) * I_3 + 3. / 40. * r0h2 * I_4 - 1. / 120. * r0h3 * I_5 + 4. / 15. * r0h_3 * I1 + (B2 - B3) / r03 * I0 + D2;
     } else if (linedist2 <= 4.0 * h2) {
-        ////// phi2 business /////
+        // phi2: the vertex angle where the vertex radius reaches 2h
         phi2 = acos(R_0 / sqrt(4.0 * h * h - r0 * r0));
 
         sincos_local(phi2, sinp, cosp);
@@ -400,7 +401,7 @@ double vertex_integral(const WallIntegralConstants& w, const EdgeIntegralConstan
 
 // full_integral_new(): the analytic closed-form
 // SPH cubic-spline kernel line integral that gridded_integral() above
-// approximates via table lookup. Now a thin wrapper over the three tiers
+// approximates via table lookup. A thin wrapper over the three tiers
 // above -- kept for spot-checking/API compatibility, and always does the
 // full recompute (no hoisting), since it has no way to know a caller wants
 // to reuse wall/edge constants across several calls. mapping.cpp's
@@ -416,9 +417,9 @@ double full_integral_new(double h, double phi, double r0, double R_0) {
     return vertex_integral(w, e, phi);
 }
 
-// Direct extraction of mapping.cpp's compute_cell_integral() per-face loop
-// body -- same operations, same order, generalized from voro++'s packed
-// f_vert/f_coord indexing to a plain flattened vertex array. See the header
+// The per-face loop body of mapping.cpp's compute_cell_integral(), on a plain
+// flattened vertex array rather than voro++'s packed f_vert/f_coord
+// indexing. See the header
 // declaration for the winding requirement and for how mapping.cpp and
 // cartesian_grid.cpp each use this.
 namespace {
@@ -510,23 +511,17 @@ double face_integral_impl(double x0, double y0, double z0, double support_radius
     // (P0,V1,V2,V3), whose sign flips iff P0 crosses the plane through
     // V1,V2,V3, so any fixed P0 not on that plane works; only its sign
     // matters, and s1/s2 must share the same P0 for their product's sign to
-    // stay meaningful. This used to take P0 as the coordinate-system origin
-    // implicitly (dropping the "-P0" terms below), which put s2 at exactly
-    // 0 -- an unconditional wrong-sign flip via s1*s2*r0<=0, independent of
-    // the true geometry -- whenever the face's plane happened to pass
-    // through the global origin exactly (for an axis-aligned box/grid face,
-    // whenever one of its 6 defining wall coordinates is exactly 0.0, e.g. a
-    // domain boundary deliberately placed at x/y/z=0, which is common:
-    // found via the lattice-fixture cross-check, and directly relevant to
-    // matching SPLASH's own grid, whose y=0 domain wall triggered it).
-    // P0 = the particle's own position (x0,y0,z0) instead: for that to
-    // reintroduce the same failure, the particle would have to sit exactly
-    // on this face's plane, a measure-zero coincidence for continuous
-    // particle positions (unlike 0.0 wall coordinates, which are a common,
-    // deliberate domain choice) -- and r0 (the particle's own signed
-    // distance to the plane) is already exactly 0 in that case too, making
-    // the M flip moot since r0's own factor in s1*s2*r0 already zeroes the
-    // comparison's other input.
+    // stay meaningful. P0 is the particle's own position (x0,y0,z0). It must
+    // not be the coordinate-system origin: for a face whose plane passes
+    // exactly through the origin (an axis-aligned box/grid face with one of
+    // its 6 defining wall coordinates exactly 0.0, e.g. a domain boundary
+    // deliberately placed at x/y/z=0, which is common) s2 would be exactly
+    // 0, an unconditional wrong-sign flip via s1*s2*r0<=0 independent of the
+    // true geometry. With P0 = the particle, the same failure needs the
+    // particle to sit exactly on this face's plane (measure zero for
+    // continuous positions), and then r0, the particle's signed distance to
+    // the plane, is exactly 0 too, so the flip is moot: r0's own factor in
+    // s1*s2*r0 already zeroes the comparison's other input.
     const double x1r = x1 - x0, y1r = y1 - y0, z1r = z1 - z0;
     const double x2sr = x2s - x0, y2sr = y2s - y0, z2sr = z2s - z0;
     const double x3sr = x3s - x0, y3sr = y3s - y0, z3sr = z3s - z0;
@@ -553,11 +548,10 @@ double face_integral_impl(double x0, double y0, double z0, double support_radius
     //    integral's sum/difference branch below already needs).
     //
     // Both facts are necessarily face-level, not per-edge -- a single edge
-    // being "far" says nothing about the face as a whole (this fixes a bug:
-    // the previous per-edge vertex-only distance under this same variable name
-    // silently dropped whole neighbor cells whenever a particle's kernel
-    // crossed a large face away from every corner, e.g. a small-h particle
-    // inside a coarse/lattice Voronoi cell).
+    // being "far" says nothing about the face as a whole (a per-edge,
+    // vertex-only distance would silently drop whole neighbor cells whenever
+    // a particle's kernel crossed a large face away from every corner, e.g.
+    // a small-h particle inside a coarse/lattice Voronoi cell).
     bool inside_polygon = true;
     bool have_sign = false;
     double sign_ref = 0.0;

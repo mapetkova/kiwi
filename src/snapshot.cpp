@@ -188,10 +188,9 @@ bool is_gcm3_unit(const std::string& raw) {
     return u == "g/cm^3" || u == "g/cm3" || u == "gcm^-3" || u == "gcm-3";
 }
 
-// g/cm^3 per Msun/pc^3, using the same constants as this project's own
-// SPLASH-comparison scripts (compare_splash.py, investigate_discrepancy.py,
-// verify_h_hypothesis.py) -- kept in one place so the h<->density
-// derivation below and those scripts can never quietly drift apart.
+// g/cm^3 per Msun/pc^3. Kept in one place so the h<->density derivation
+// below uses a single set of constants (tools/suggest_config.py repeats the
+// same constants in msun_pc3_to_g_cm3()).
 double msun_pc3_to_g_cm3() {
     constexpr double msun_g = 1.9891e33;
     constexpr double pc_cm = 3.08567758e18;
@@ -379,8 +378,8 @@ SPHSnapshot load_splash_ascii(const std::string& path, double hfact) {
     if (have_h != have_rho) {
         // h = hfact*(m/rho)^(1/3), hfact = 1.2 for the cubic spline -- Price et al. 2018 (the Phantom paper), eq. 6.
         // hfact is the caller's (Config::kernel_hfact(): per-kernel Phantom default, or kernel.hfact).
-        // Note this is the *inverse* of (m/rho)^(-1/3): that exponent sign would make h grow
-        // with density, which is backwards (denser gas is more highly resolved -> smaller h).
+        // (The exponent is positive: with (m/rho)^(-1/3), h would grow with density, which is
+        // backwards -- denser gas is more highly resolved, so h is smaller.)
         //
         // That formula only holds for m, h, and rho expressed in a mutually consistent unit
         // system -- but `splash to ascii` writes m in M_Sun, h in pc, and density in g/cm^3

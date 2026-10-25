@@ -43,7 +43,7 @@ PointSet add_coverage_grid_buffer(const PointSet& points, const std::vector<doub
 
 // The cell-centered Cartesian candidate-point grid shared by
 // add_coverage_grid_buffer() (which filters it down to just the
-// SPH-uncovered candidates) and, standalone, by the permanent lattice-based
+// SPH-uncovered candidates) and, standalone, by the lattice-based
 // Voronoi regression test (tools/test_lattice_grid.cpp): lay spacing =
 // spacing_fraction * min(domain extents) apart on all 3 axes, first/last
 // point spacing/2 in from each wall so nothing sits exactly on a domain
@@ -79,7 +79,7 @@ PointSet lloyd_step(const PointSet& points, const Domain& domain, const GridBloc
 // and N Lloyd iterations per cfg, writing intermediate files under
 // cfg.run_dir() (and every iteration if cfg.lloyd.save_each_iteration is
 // set). Returns the final point set. This is the single entry point for
-// stage 2 of the pipeline -- no other code should reimplement this
+// the point-set stage -- no other code should reimplement this
 // sequencing.
 //
 // If cfg.stage_path("points-final.dat") already exists on disk, it is

@@ -1,5 +1,5 @@
 // Picks, once per stage, which face-integral implementation a run uses for its configured kernel:
-// the original cubic-spline fast path (analytic or tabulated, kernel_integral.hpp) or the generic
+// the cubic-spline fast path (analytic or tabulated, kernel_integral.hpp) or the generic
 // analytic one (kernel_integral_generic.hpp). Stages hold one KernelIntegrator and call face();
 // everything kernel-specific (support radius, which implementation) stays in here.
 #pragma once
