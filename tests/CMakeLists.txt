@@ -17,6 +17,10 @@
 #   bad_input             malformed configs and snapshots must give a one-line `[kiwi] error` and exit 1
 #                         (bad_input_test.py).
 #   version_consistent    `kiwi --version` equals the version in CITATION.cff.
+#   convert_snapshot      `kiwi convert-snapshot` on synthetic Phantom dumps vs the particles they hold
+#                         (convert_snapshot_test.py).
+#   suggest_config        tools/suggest_config.py on a Phantom dump, via convert-snapshot; skipped without
+#                         numpy (suggest_config_test.py).
 #   kernel_tables         derived kernel-integral coefficient tables vs brute-force quadrature
 #                         (tools/kernel_tables). Needs python3 (standard library only).
 
@@ -43,6 +47,14 @@ if(Python3_FOUND)
   add_test(NAME version_consistent
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version_consistent_test.py
                    $<TARGET_FILE:kiwi> ${CMAKE_SOURCE_DIR}/CITATION.cff)
+  add_test(NAME convert_snapshot
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/convert_snapshot_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/convert_snapshot_work)
+  # tools/suggest_config.py needs numpy; the test is skipped (exit 77) where numpy is missing
+  add_test(NAME suggest_config
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/suggest_config_test.py
+                   $<TARGET_FILE:kiwi> ${CMAKE_CURRENT_BINARY_DIR}/suggest_config_work)
+  set_tests_properties(suggest_config PROPERTIES SKIP_RETURN_CODE 77)
   add_test(NAME kernel_tables
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/kernel_tables/verify.py 4)
   # Real simulation snapshot (tests/data, not tracked by git); skipped (exit 77) when it is not there.

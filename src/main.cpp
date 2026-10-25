@@ -1,4 +1,6 @@
 #include <iostream>
+#include <stdexcept>
+#include <string>
 
 #include "kiwi/cartesian_grid.hpp"
 #include "kiwi/cartesian_map.hpp"
@@ -6,6 +8,7 @@
 #include "kiwi/manifest.hpp"
 #include "kiwi/mapping.hpp"
 #include "kiwi/point_set.hpp"
+#include "kiwi/snapshot.hpp"
 #include "kiwi/tessellation.hpp"
 #include "kiwi/writer_polaris.hpp"
 #include "kiwi/writer_voronoi.hpp"
@@ -156,6 +159,44 @@ int run_manifest(const std::string& config_path) {
 
 } // namespace
 
+// `kiwi convert-snapshot <snapshot> <output> [options]`: read a snapshot in any supported format and write it
+// as plain_ascii (gas particles only; Phantom dumps in pc, Msun and km/s unless overridden). It lets
+// tools that don't read the binary formats (tools/suggest_config.py) work on a Phantom dump.
+static int run_convert_snapshot(int argc, char** argv) {
+    const char* usage =
+        "usage: kiwi convert-snapshot <snapshot> <output.txt> [--format auto|plain_ascii|splash_ascii|phantom_binary]\n"
+        "                             [--allow-missing-velocity] [--length-cm X] [--mass-g X] [--velocity-cms X]\n";
+    if (argc < 4) {
+        std::cerr << usage;
+        return 1;
+    }
+    std::string input = argv[2], output = argv[3], format = "auto";
+    bool allow_missing_velocity = false;
+    kiwi::PhantomUnits units;
+    for (int i = 4; i < argc; ++i) {
+        std::string a = argv[i];
+        auto value = [&](const char* name) -> std::string {
+            if (i + 1 >= argc) throw std::runtime_error(std::string(name) + " needs a value");
+            return argv[++i];
+        };
+        if (a == "--format") format = value("--format");
+        else if (a == "--allow-missing-velocity") allow_missing_velocity = true;
+        else if (a == "--length-cm") units.length_cm = std::stod(value("--length-cm"));
+        else if (a == "--mass-g") units.mass_g = std::stod(value("--mass-g"));
+        else if (a == "--velocity-cms") units.velocity_cms = std::stod(value("--velocity-cms"));
+        else {
+            std::cerr << "unknown option '" << a << "'\n" << usage;
+            return 1;
+        }
+    }
+    kiwi::Config defaults;  // only for the default kernel's hfact (used by splash_ascii files that lack h or rho)
+    kiwi::SPHSnapshot snap =
+        kiwi::load_sph_snapshot(input, format, defaults.kernel_hfact(), units, allow_missing_velocity);
+    kiwi::write_plain_ascii(snap, output);
+    std::cerr << "[kiwi] wrote " << snap.size() << " particle(s) to " << output << "\n";
+    return 0;
+}
+
 #ifndef KIWI_VERSION
 #error "KIWI_VERSION must be defined by the build -- see CMakeLists.txt"
 #endif
@@ -165,9 +206,18 @@ int main(int argc, char** argv) {
         std::cout << "kiwi " << KIWI_VERSION << "\n";
         return 0;
     }
+    if (argc >= 2 && std::string(argv[1]) == "convert-snapshot") {
+        try {
+            return run_convert_snapshot(argc, argv);
+        } catch (const std::exception& e) {
+            std::cerr << "[kiwi] error: " << e.what() << "\n";
+            return 1;
+        }
+    }
     if (argc != 3) {
         std::cerr << "usage: kiwi <point-set|tessellate|map|write-polaris|write-voronoi|"
                      "cartesian-map|sph-to-grid|inverse-mapping-test|manifest> <config.json>\n"
+                     "       kiwi convert-snapshot <snapshot> <output.txt> [options]\n"
                      "       kiwi --version\n";
         return 1;
     }

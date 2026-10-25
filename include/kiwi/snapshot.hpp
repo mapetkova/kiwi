@@ -101,6 +101,12 @@ std::string detect_snapshot_format(const std::string& path);
 SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format = "auto", double hfact = 1.2,
                               const PhantomUnits& units = PhantomUnits(), bool allow_missing_velocity = false);
 
+// Writes `snap` as a plain_ascii file (headerless, 9 columns per particle: x y z vx vy vz m h rho, full
+// double precision so reading it back gives the same values). Throws std::runtime_error if the file can't
+// be written. The rho column is written as loaded: g/cm^3 for Phantom and splash_ascii input, as read for
+// plain_ascii input. Used by `kiwi convert-snapshot`.
+void write_plain_ascii(const SPHSnapshot& snap, const std::string& path);
+
 // Just the positions, as a PointSet ready for the buffer/Lloyd/tessellation
 // stages (which don't need to know anything about velocity/mass/density).
 PointSet extract_points(const SPHSnapshot& snap);

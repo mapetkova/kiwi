@@ -34,8 +34,9 @@ First public version (pre-beta).
   config is reported instead of silently reusing stale cached output.
 - **Plain-text Voronoi grid writer** (`write-voronoi`) and an **experimental POLARIS grid writer**
   (`write-polaris`: fixed quantity list of gas temperature, velocity and density; the interface may change).
-- **Helper scripts** in `tools/`: `suggest_config.py` (propose a config from a raw snapshot, including a
-  zoom assistant), `plot_cartesian_map.py` (slices and projections of either Cartesian output, with units)
+- **`kiwi convert-snapshot`**: write any supported snapshot as `plain_ascii` text.
+- **Helper scripts** in `tools/`: `suggest_config.py` (propose a config from a raw snapshot in any of the
+  three formats, including a zoom assistant; Phantom dumps are read through `kiwi convert-snapshot`), `plot_cartesian_map.py` (slices and projections of either Cartesian output, with units)
   and diagnostic plots.
 - **Tests and CI**: lattice tessellation, generic-kernel, synthetic end-to-end, Phantom-dump, POLARIS
   writer, bad-input, example-config, version and kernel-table tests, plus a real-data test on a small

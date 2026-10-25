@@ -89,21 +89,31 @@ Requires numpy always; matplotlib only if the interactive zoom assistance
 actually runs (numpy is the same dependency the earlier cube-extraction test
 scripts in this project already used).
 
-Snapshot format: two raw SPH snapshot formats are recognized, matching
-load_sph_snapshot() in snapshot.cpp exactly -- "plain_ascii" (a
+Snapshot format: three raw SPH snapshot formats are recognized, matching
+load_sph_snapshot() in snapshot.cpp -- "plain_ascii" (a
 headerless text file, 9 columns per particle: x y z vx vy vz m h rho) and
 "splash_ascii" (output of `splash to ascii`, from the SPLASH repo:
 github.com/danieljprice/splash -- a commented header/preamble followed by
 15-column rows: x y z m h rho vx vy vz pressure alpha div_v poten dt itype;
 only itype == 1 gas particles are kept, others are dropped with a note
-printed).
-Auto-detected by default (sniffs the file for the SPLASH signature comment);
-override with --snapshot-format if detection ever guesses wrong.
+printed) and "phantom_binary" (a Phantom dump file). This script does not read the
+binary format itself: it runs `kiwi convert-snapshot` (the C++ reader, in pc, M_sun and
+km/s) to write a temporary plain_ascii copy and works on that, while the config it
+writes still points at the original dump with input_snapshot_format "phantom_binary".
+`kiwi` is looked up with --kiwi, then <repo>/build/kiwi, then PATH. A Phantom small dump
+(no velocities) needs --allow-missing-velocity, which is also written to the config.
+Auto-detected by default: a file containing NUL bytes is taken to be a Phantom dump,
+otherwise the first line is checked for the SPLASH signature comment (as in
+snapshot.cpp); override with --snapshot-format if detection ever guesses wrong.
 """
 import argparse
 import json
+import atexit
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 
 
 def eprint(*args, **kwargs):
@@ -111,10 +121,15 @@ def eprint(*args, **kwargs):
 
 
 def detect_snapshot_format(path):
-    """Mirrors detect_snapshot_format() in snapshot.cpp exactly: sniffs the
-    file's first line for the `splash to ascii` signature comment; anything
-    else is assumed to be the plain_ascii format (no header at
-    all). Returns "plain_ascii" or "splash_ascii" -- never "auto"."""
+    """Cheap version of detect_snapshot_format() in snapshot.cpp: a file with
+    NUL bytes near the start is taken to be a Phantom binary dump (kiwi itself
+    checks the capture pattern when it converts it); otherwise the first line
+    is sniffed for the `splash to ascii` signature comment, and anything else
+    is assumed to be the plain_ascii format (no header at all). Returns
+    "phantom_binary", "plain_ascii" or "splash_ascii" -- never "auto"."""
+    with open(path, "rb") as f:
+        if b"\0" in f.read(4096):
+            return "phantom_binary"
     with open(path) as f:
         first_line = f.readline()
     if first_line.startswith("#") and "SPLASH" in first_line:
@@ -471,6 +486,31 @@ def _load_splash_ascii(path):
         "m": m, "h": h, "rho": rho,
     }
     return cols
+
+
+def find_kiwi(explicit=None):
+    """Path of the kiwi executable: --kiwi, else <repo>/build/kiwi, else `kiwi` on PATH."""
+    candidates = [explicit] if explicit else [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "build", "kiwi")]
+    for c in candidates:
+        if c and os.path.isfile(c) and os.access(c, os.X_OK):
+            return os.path.abspath(c)
+    found = None if explicit else shutil.which("kiwi")
+    if found:
+        return found
+    raise FileNotFoundError(
+        "the kiwi executable was not found" + (f" at {explicit}" if explicit else
+        " (looked in <repo>/build/kiwi and on PATH)") + "; build it (cmake --build build) or pass --kiwi")
+
+
+def convert_with_kiwi(kiwi, path, out_path, allow_missing_velocity=False):
+    """Run `kiwi convert-snapshot` to write `path` as a plain_ascii file at `out_path`."""
+    cmd = [kiwi, "convert-snapshot", path, out_path]
+    if allow_missing_velocity:
+        cmd.append("--allow-missing-velocity")
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"`kiwi convert-snapshot` failed:\n{r.stderr.strip()}")
 
 
 def load_snapshot(path, fmt="auto"):
@@ -1001,13 +1041,18 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    ap.add_argument("snapshot", help="path to the raw SPH snapshot (plain_ascii or "
-                                      "splash_ascii format -- see --snapshot-format)")
-    ap.add_argument("--snapshot-format", choices=["auto", "plain_ascii", "splash_ascii"],
+    ap.add_argument("snapshot", help="path to the raw SPH snapshot (plain_ascii, "
+                                      "splash_ascii or phantom_binary format -- see --snapshot-format)")
+    ap.add_argument("--snapshot-format", choices=["auto", "plain_ascii", "splash_ascii", "phantom_binary"],
                      default="auto",
-                     help="raw SPH snapshot format (default: auto -- detected by sniffing the "
-                          "file for the `splash to ascii` signature comment). Override if "
-                          "detection ever guesses wrong.")
+                     help="raw SPH snapshot format (default: auto -- a file with NUL bytes is a Phantom "
+                          "dump, otherwise the first line is sniffed for the `splash to ascii` "
+                          "signature comment). Override if detection ever guesses wrong.")
+    ap.add_argument("--kiwi", help="path of the kiwi executable, used to read a Phantom binary dump "
+                                    "(default: <repo>/build/kiwi, then kiwi on PATH)")
+    ap.add_argument("--allow-missing-velocity", action="store_true",
+                     help="phantom_binary only: accept a Phantom small dump that has no velocity arrays "
+                          "(velocities become zero; also written to the config)")
     ap.add_argument("--run-name", help="run_name for the config (default: snapshot basename)")
     ap.add_argument("--work-folder", help="work_folder for the config (no default -- always required)")
     ap.add_argument("--density-table", help="path to a tabulated kernel-integral file; "
@@ -1073,7 +1118,15 @@ def main():
         resolved_format = args.snapshot_format
         if resolved_format == "auto":
             resolved_format = detect_snapshot_format(args.snapshot)
-        snap = load_snapshot(args.snapshot, resolved_format)
+        read_path, read_format = args.snapshot, resolved_format
+        if resolved_format == "phantom_binary":
+            workdir = tempfile.mkdtemp(prefix="kiwi_suggest_")
+            atexit.register(shutil.rmtree, workdir, True)
+            read_path = os.path.join(workdir, "converted.txt")
+            print("  converting the Phantom dump with `kiwi convert-snapshot` (pc, M_sun, km/s) ...")
+            convert_with_kiwi(find_kiwi(args.kiwi), args.snapshot, read_path, args.allow_missing_velocity)
+            read_format = "plain_ascii"
+        snap = load_snapshot(read_path, read_format)
     except Exception as e:  # noqa: BLE001 -- surface any parse error plainly, this is a CLI tool
         eprint(f"suggest_config.py: failed to read snapshot: {e}")
         return 1
@@ -1191,15 +1244,17 @@ def main():
             use_tabulated = bool(density_table)
 
     input_snapshot = args.snapshot
+    config_format = resolved_format
     if args.shift_snapshot:
         shifted_path = os.path.join(
             os.path.dirname(os.path.abspath(args.snapshot)) or ".",
             os.path.splitext(os.path.basename(args.snapshot))[0] + "_comshift.out",
         )
         print(f"\n--shift-snapshot: writing CoM-shifted copy to {shifted_path} ...")
-        shift_snapshot_file(args.snapshot, domain_center, shifted_path, resolved_format)
+        shift_snapshot_file(read_path, domain_center, shifted_path, read_format)
         print("  done.")
         input_snapshot = shifted_path
+        config_format = read_format
         half_x = (domain["x_max"] - domain["x_min"]) / 2.0
         half_y = (domain["y_max"] - domain["y_min"]) / 2.0
         half_z = (domain["z_max"] - domain["z_min"]) / 2.0
@@ -1214,12 +1269,14 @@ def main():
         "domain": domain,
         "grid_blocks": {"block_scale_factor": args.block_scale_factor},
         "input_snapshot": input_snapshot,
-        "input_snapshot_format": resolved_format,
+        "input_snapshot_format": config_format,
         "work_folder": work_folder,
         "buffer": {"enabled": True, "strategy": "coverage_grid"},
         "lloyd": {"iterations": 0},
         "cartesian_map": {"resolution": 128},
     }
+    if args.allow_missing_velocity and config_format == "phantom_binary":
+        config["allow_missing_velocity"] = True
     if use_tabulated:
         config["mapping"] = {"use_tabulated_integral": True, "density_table": density_table}
 

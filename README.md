@@ -68,6 +68,7 @@ Each stage runs the stages before it if their output is missing:
 | `kiwi sph-to-grid <cfg>` | Map particles directly onto a Cartesian grid (no Voronoi step) | `cartesian_grid.dat` |
 | `kiwi write-voronoi <cfg>` | Plain-text Voronoi grid | `grid-voronoi.txt` |
 | `kiwi write-polaris <cfg>` | Optional, experimental: POLARIS binary grid | `grid-polaris.dat` |
+| `kiwi convert-snapshot <snapshot> <out.txt>` | Write any supported snapshot as `plain_ascii` (gas only; Phantom dumps in pc, M_sun, km/s). Options: `--format`, `--allow-missing-velocity`, `--length-cm`, `--mass-g`, `--velocity-cms` | `<out.txt>` |
 | `kiwi inverse-mapping-test <cfg>` | Validation: map the grid back onto the particles | see log |
 | `kiwi manifest <cfg>` | Write `manifest.json` recording the settings behind each output | `manifest.json` |
 
@@ -171,13 +172,15 @@ Two ASCII formats are also supported:
   simulation code, so it is the easiest thing to write from your own data. Blank lines are skipped; any other
   line that is not exactly 9 finite numbers is an error that names the line.
 
-`tools/suggest_config.py` (below) reads either format and proposes a config for a snapshot.
+`tools/suggest_config.py` (below) reads all three formats and proposes a config for a snapshot; for a Phantom
+dump it uses `kiwi convert-snapshot`.
 
 ## Setting up a run: `suggest_config.py`
 
 `tools/suggest_config.py` builds a ready-to-run config from a raw snapshot, so you don't have to
 pick a domain by hand or copy an old config. It needs Python 3 with `numpy` (and `matplotlib` for
-the interactive zoom).
+the interactive zoom), and, for a Phantom binary dump, the built `kiwi` executable (found in `build/kiwi`, on
+`PATH`, or with `--kiwi`; add `--allow-missing-velocity` for a small dump).
 
 ```
 python3 tools/suggest_config.py path/to/snapshot.out

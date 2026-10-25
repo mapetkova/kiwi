@@ -17,7 +17,8 @@ Please include:
 ## Building and testing
 
 You need CMake >= 3.13 and a C++17 compiler. Python 3 (standard library only) is needed for most tests;
-the plot and config helpers in `tools/` also need `numpy` and `matplotlib`.
+the plot and config helpers in `tools/` also need `numpy` and `matplotlib`; the `suggest_config` test needs
+`numpy` and is skipped without it.
 
 ```bash
 cmake -S . -B build

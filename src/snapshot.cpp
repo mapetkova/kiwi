@@ -522,6 +522,17 @@ SPHSnapshot load_sph_snapshot(const std::string& path, const std::string& format
         "splash_ascii, or phantom_binary)");
 }
 
+void write_plain_ascii(const SPHSnapshot& snap, const std::string& path) {
+    std::ofstream f(path);
+    if (!f) throw std::runtime_error("could not open output file for writing: " + path);
+    f.precision(17);
+    for (size_t i = 0; i < snap.size(); ++i) {
+        f << snap.x[i] << ' ' << snap.y[i] << ' ' << snap.z[i] << ' ' << snap.vx[i] << ' ' << snap.vy[i] << ' '
+          << snap.vz[i] << ' ' << snap.m[i] << ' ' << snap.h[i] << ' ' << snap.rho[i] << '\n';
+    }
+    if (!f) throw std::runtime_error("error while writing: " + path);
+}
+
 PointSet extract_points(const SPHSnapshot& snap) {
     PointSet points;
     points.id = snap.id;
