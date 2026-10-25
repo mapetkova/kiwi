@@ -262,6 +262,11 @@ The test data is generated on the fly, so nothing needs downloading.
   when the Cartesian cells are larger than the Voronoi cells (e.g. 64^3 over the 10 x 10 x 16 pc cutout
   loses about 28% of the mass). Use a finer grid, or the `map` output itself, when mass matters.
 
+## Contributing
+
+Bug reports and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Changes between versions
+are listed in [CHANGELOG.md](CHANGELOG.md).
+
 ## Citation
 
 If you use KIWI, please cite the two papers behind its mapping methods, and the thesis if you use a kernel

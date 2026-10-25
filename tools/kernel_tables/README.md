@@ -1,4 +1,4 @@
-# kernel_tables: verification of the thesis kernel-integral coefficients (Phase 0)
+# kernel_tables: derivation and verification of the thesis kernel-integral coefficients
 
 Standard-library Python only (exact `fractions` arithmetic, hand-written Gauss-Legendre quadrature).
 
